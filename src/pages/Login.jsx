@@ -119,11 +119,12 @@ export default function Login() {
                         {/* Google Sign In Button */}
                         <Button
                             type="button"
-                            variant="outline"
-                            className="w-full h-12 border-slate-800 hover:bg-white/5 text-white font-medium text-base transition-colors rounded-lg flex items-center justify-center gap-2"
-                        >
-                            <GoogleIcon />
-                            <span>Login dengan Google</span>
+                            className="w-full h-12 bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-slate-900 shadow-sm rounded-lg flex items-center justify-center gap-2"
+                            >
+                             <GoogleIcon />
+                             <span>Login dengan Google</span>
+                            
+                            
                         </Button>
                     </form>
                 </div>
