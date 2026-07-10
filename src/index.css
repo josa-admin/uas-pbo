@@ -83,7 +83,6 @@ html,
 body {
   margin: 0 !important;
   padding: 0 !important;
-  background: #0a2318 !important;
   min-height: 100vh;
   width: 100%;
 }
@@ -96,9 +95,9 @@ body {
   text-align: unset;
   border: none !important;
   min-height: 100vh;
-  display: block;
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
-  background: #0a2318 !important;
   position: relative;
 }
 
@@ -265,8 +264,7 @@ code {
   }
   body {
     /* bg-background intentionally removed — pages handle their own backgrounds */
-    @apply text-foreground;
-    background: #0a2318 !important;
+    @apply text-foreground bg-slate-50;
   }
   html {
     @apply font-sans;
