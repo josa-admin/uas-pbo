@@ -1,12 +1,14 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "../pages/Login";
+import { Routes, Route } from 'react-router-dom';
+import SplashScreen from '../pages/splashscreen';
+import Login from '../pages/Login';
+import Dashboard from '../pages/Dashbboard';
 
 export default function AppRoutes() {
-    return (
-        <BrowserRouter>
-            <Routes>
-                <Route path="/" element={<Login />} />
-            </Routes>
-        </BrowserRouter>
-    );
+  return (
+    <Routes>
+      <Route path="/" element={<SplashScreen />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+    </Routes>
+  );
 }
