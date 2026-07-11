@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Package, User, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ const GoogleIcon = () => (
 );
 
 export default function Login() {
+    const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
 
     return (
@@ -49,7 +51,7 @@ export default function Login() {
                     </div>
 
                     {/* Form */}
-                    <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+                    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); navigate("/barang-masuk"); }}>
                         {/* Username Input */}
                         <div className="space-y-2">
                             <div className="relative">
@@ -116,15 +118,13 @@ export default function Login() {
                             <Separator className="flex-1 bg-slate-800" />
                         </div>
 
-                        {/* Google Sign In Button */}
                         <Button
                             type="button"
+                            onClick={() => navigate("/barang-masuk")}
                             className="w-full h-12 bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-slate-900 shadow-sm rounded-lg flex items-center justify-center gap-2"
                             >
                              <GoogleIcon />
                              <span>Login dengan Google</span>
-                            
-                            
                         </Button>
                     </form>
                 </div>
