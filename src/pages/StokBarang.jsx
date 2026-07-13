@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -82,9 +83,53 @@ function statusClasses(status) {
 }
 
 export default function StokBarang() {
+  const location = useLocation();
+  const searchInputRef = useRef(null);
+
   const [query, setQuery] = useState("");
   const [kategori, setKategori] = useState("");
   const [status, setStatus] = useState("");
+
+  // Set default status filter and focus search input depending on route pathname
+  useEffect(() => {
+    if (location.pathname === "/stok-kritis") {
+      setStatus("Kritis");
+      setQuery("");
+      setKategori("");
+    } else if (location.pathname === "/pencarian-barang") {
+      setStatus("");
+      setKategori("");
+      // Delay slightly to ensure browser focus handles successfully
+      setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }, 50);
+    } else {
+      setStatus("");
+      setKategori("");
+    }
+  }, [location.pathname]);
+
+  const pageTitle = useMemo(() => {
+    if (location.pathname === "/stok-kritis") {
+      return "Stok Barang Kritis";
+    }
+    if (location.pathname === "/pencarian-barang") {
+      return "Pencarian Barang";
+    }
+    return "Manajemen Stok Barang";
+  }, [location.pathname]);
+
+  const breadcrumb = useMemo(() => {
+    if (location.pathname === "/stok-kritis") {
+      return "Dashboard > Stok Kritis";
+    }
+    if (location.pathname === "/pencarian-barang") {
+      return "Dashboard > Pencarian Barang";
+    }
+    return "Dashboard > Manajemen Barang";
+  }, [location.pathname]);
 
   const rows = useMemo(() => {
     return SAMPLE_ROWS.filter((item) => {
@@ -107,8 +152,8 @@ export default function StokBarang() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
         <div>
-          <div className="text-sm text-slate-500 font-medium">Dashboard &gt; Manajemen Barang</div>
-          <h1 className="text-2xl font-bold text-slate-800">Manajemen Stok Barang</h1>
+          <div className="text-sm text-slate-500 font-medium">{breadcrumb}</div>
+          <h1 className="text-2xl font-bold text-slate-800">{pageTitle}</h1>
         </div>
         <Button className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium">Tambah Barang</Button>
       </div>
@@ -117,7 +162,8 @@ export default function StokBarang() {
         <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm">
           <div className="mb-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,260px)]">
             <Input
-              placeholder="Cari berdasarkan kode, nama, atau kategori"
+              ref={searchInputRef}
+              placeholder="Cari berdasarkan kode, nama, atau kategori..."
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               className="bg-white border-slate-200"
