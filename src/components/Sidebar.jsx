@@ -26,13 +26,18 @@ export default function Sidebar() {
     <aside className="w-64 h-screen bg-[#111c24] text-slate-300 flex flex-col justify-between select-none shrink-0 border-r border-slate-800">
       <div className="flex flex-col">
         {/* Brand/Logo Section */}
-        <div className="p-6 pb-8">
-          <h1 className="text-3xl font-bold text-white tracking-wider flex items-center gap-2">
-            WMS
-          </h1>
-          <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest font-semibold">
-            Warehouse Management System
-          </p>
+        <div className="p-6 pb-8 flex items-center gap-3">
+          <div className="bg-emerald-600 text-white p-2 rounded-xl flex items-center justify-center shadow-md">
+            <Package className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white tracking-wider leading-none">
+              WMS
+            </h1>
+            <p className="text-[9px] text-slate-200 mt-1.5 uppercase tracking-wider font-semibold leading-tight">
+              Warehouse<br />Management System
+            </p>
+          </div>
         </div>
 
         {/* Navigation Menu */}
