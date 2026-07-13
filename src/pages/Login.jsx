@@ -24,8 +24,60 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-b from-[#052620] to-[#031c18] flex items-center justify-center p-4">
       <div className="w-full max-w-md my-8">
         {/* Logo */}
-        <div className="mb-10 text-center">
-          <Package className="mx-auto h-12 w-12 text-[#10b981]" />
+        <div className="mb-10 text-center flex flex-col items-center">
+          <svg
+            width="100"
+            height="100"
+            viewBox="0 0 120 120"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="mx-auto"
+          >
+            {/* Top face (diamond) */}
+            <polygon
+              points="60,12 100,34 60,56 20,34"
+              stroke="#3ecf8e"
+              strokeWidth="1.8"
+              fill="rgba(62,207,142,0.04)"
+              strokeLinejoin="round"
+            />
+            {/* Vertical cross line */}
+            <line
+              x1="60" y1="12" x2="60" y2="56"
+              stroke="#3ecf8e" strokeWidth="1.4" strokeLinecap="round"
+            />
+            {/* Horizontal cross line */}
+            <line
+              x1="20" y1="34" x2="100" y2="34"
+              stroke="#3ecf8e" strokeWidth="1.4" strokeLinecap="round"
+            />
+            {/* Left face */}
+            <polygon
+              points="20,34 60,56 60,100 20,78"
+              stroke="#3ecf8e"
+              strokeWidth="1.8"
+              fill="rgba(62,207,142,0.025)"
+              strokeLinejoin="round"
+            />
+            {/* Right face */}
+            <polygon
+              points="100,34 100,78 60,100 60,56"
+              stroke="#3ecf8e"
+              strokeWidth="1.8"
+              fill="rgba(62,207,142,0.025)"
+              strokeLinejoin="round"
+            />
+            {/* Vertical accent below bottom-left corner */}
+            <line
+              x1="20" y1="34" x2="20" y2="114"
+              stroke="#3ecf8e" strokeWidth="1.1" strokeOpacity="0.45" strokeLinecap="round"
+            />
+            {/* Diagonal accent inside box */}
+            <line
+              x1="23" y1="98" x2="64" y2="82"
+              stroke="#3ecf8e" strokeWidth="1.1" strokeOpacity="0.35" strokeLinecap="round"
+            />
+          </svg>
 
           <h1 className="mt-4 text-6xl font-bold text-white tracking-wide">
             WMS
