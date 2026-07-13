@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import SplashScreen from "../pages/splashscreen";
 import Login from "../pages/Login";
 import Dashbboard from "../pages/Dashbboard";
 import StokBarang from "../pages/StokBarang";
@@ -12,7 +13,8 @@ export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<SplashScreen />} />
+        <Route path="/login" element={<Login />} />
 
         {/* Dashboard layout routes */}
         <Route element={<DashboardLayout />}>
@@ -26,7 +28,7 @@ export default function AppRoutes() {
           <Route path="/profil" element={<Profil />} />
         </Route>
 
-        {/* Redirect any other path to login */}
+        {/* Redirect any other path to splash screen */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
