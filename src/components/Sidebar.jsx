@@ -23,7 +23,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 h-screen bg-[#111c24] flex flex-col justify-between select-none shrink-0 border-r border-slate-800">
+    <aside className="w-64 h-screen bg-[#111c24] text-slate-300 flex flex-col justify-between select-none shrink-0 border-r border-slate-800">
       <div className="flex flex-col">
         {/* Brand/Logo Section */}
         <div className="p-6 pb-8 flex items-center gap-3">

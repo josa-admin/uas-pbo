@@ -91,7 +91,7 @@ export default function SplashScreen() {
 
         .splash-desc {
           font-size: 15px;
-          color: rgba(255, 255, 255, 0.4);
+          color: rgba(22, 20, 20, 0.4);
           text-align: center;
           line-height: 1.8;
           opacity: 0;
