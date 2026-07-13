@@ -1,13 +1,13 @@
 import { NavLink } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Package, 
-  LogIn, 
-  LogOut, 
-  BarChart3, 
-  Search, 
-  AlertTriangle, 
-  Calendar 
+import {
+  LayoutDashboard,
+  Package,
+  LogIn,
+  LogOut,
+  BarChart3,
+  Search,
+  AlertTriangle,
+  Calendar
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -23,7 +23,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 h-screen bg-[#111c24] text-slate-300 flex flex-col justify-between select-none shrink-0 border-r border-slate-800">
+    <aside className="w-64 h-screen bg-[#111c24] flex flex-col justify-between select-none shrink-0 border-r border-slate-800">
       <div className="flex flex-col">
         {/* Brand/Logo Section */}
         <div className="p-6 pb-8 flex items-center gap-3">
@@ -54,7 +54,7 @@ export default function Sidebar() {
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-wider leading-none">
+            <h1 className="text-2xl font-bold !text-white tracking-wider leading-none">
               WMS
             </h1>
             <p className="text-[9px] text-slate-200 mt-1.5 uppercase tracking-wider font-semibold leading-tight">
@@ -72,10 +72,9 @@ export default function Sidebar() {
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex items-center gap-3.5 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/20"
-                      : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                  `flex items-center gap-3.5 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${isActive
+                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/20"
+                    : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
                   }`
                 }
               >
