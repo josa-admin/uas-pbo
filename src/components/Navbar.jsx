@@ -1,9 +1,41 @@
+import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Menu, Search, Bell, Settings, LogOut } from "lucide-react";
 
 export default function Navbar() {
   const location = useLocation();
   const isBarangKeluar = location.pathname === "/barang-keluar";
+
+  const [profile, setProfile] = useState({
+    nama: "Administrator",
+    role: "Admin Gudang Utama",
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+  });
+
+  useEffect(() => {
+    const loadProfile = () => {
+      const savedProfile = localStorage.getItem("wms_user_profile");
+      if (savedProfile) {
+        try {
+          const parsed = JSON.parse(savedProfile);
+          setProfile({
+            nama: parsed.nama || "Administrator",
+            role: parsed.role || "Admin Gudang Utama",
+            avatar: parsed.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+          });
+        } catch (e) {
+          console.error("Gagal membaca data profil di Navbar", e);
+        }
+      }
+    };
+
+    loadProfile();
+
+    window.addEventListener("wms_profile_updated", loadProfile);
+    return () => {
+      window.removeEventListener("wms_profile_updated", loadProfile);
+    };
+  }, []);
 
   return (
     <header className="h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-6 shrink-0 shadow-sm">
@@ -51,17 +83,17 @@ export default function Navbar() {
         {/* User Profile */}
         <div className="flex items-center gap-3">
           <div className="text-right hidden sm:block">
-            <span className="text-sm font-semibold text-slate-800 block leading-tight">
-              Administrator
+            <span className="text-sm font-semibold text-slate-800 block leading-tight text-slate-700">
+              {profile.nama}
             </span>
             <span className="text-[11px] text-slate-400 block font-medium mt-0.5 leading-none">
-              Admin Gudang Utama
+              {profile.role}
             </span>
           </div>
 
           <img
-            src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-            alt="Administrator Avatar"
+            src={profile.avatar}
+            alt={`${profile.nama} Avatar`}
             className="w-9 h-9 rounded-full object-cover border border-slate-200 shadow-sm"
           />
         </div>

@@ -5,6 +5,7 @@ import StokBarang from "../pages/StokBarang";
 import BarangMasuk from "../pages/BarangMasuk";
 import BarangKeluar from "../pages/BarangKeluar";
 import Laporan from "../pages/Laporan";
+import Profil from "../pages/Profil";
 import DashboardLayout from "../components/DashboardLayout";
 
 export default function AppRoutes() {
@@ -22,7 +23,7 @@ export default function AppRoutes() {
                     <Route path="/laporan" element={<Laporan />} />
                     <Route path="/pencarian-barang" element={<StokBarang />} />
                     <Route path="/stok-kritis" element={<StokBarang />} />
-                    <Route path="/profil" element={<StokBarang />} />
+                    <Route path="/profil" element={<Profil />} />
                 </Route>
 
                 {/* Redirect any other path to login */}
