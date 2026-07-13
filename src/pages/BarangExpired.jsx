@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,21 +10,32 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { AlertOctagon, Calendar, Trash2, RotateCcw, MapPin, Search } from "lucide-react";
+import { getExpiredAlert } from "../api/expiredApi";
 
-const INITIAL_EXPIRED_ITEMS = [
-  { kode: "BRG-001", nama: "Kopi Bubuk Premium", kategori: "Minuman", stok: 12, expiredDate: "2026-06-15", lokasi: "Rak A-01", harga: 12000 },
-  { kode: "BRG-002", nama: "Teh Celup Herbal", kategori: "Minuman", stok: 5, expiredDate: "2026-07-28", lokasi: "Rak A-02", harga: 9000 },
-  { kode: "BRG-003", nama: "Susu Kaleng Manis", kategori: "Minuman", stok: 15, expiredDate: "2026-05-10", lokasi: "Rak B-01", harga: 14000 },
-  { kode: "BRG-004", nama: "Roti Tawar Gandum", kategori: "Makanan", stok: 8, expiredDate: "2026-07-15", lokasi: "Rak B-03", harga: 15000 },
-  { kode: "BRG-005", nama: "Saus Cabai Botol", kategori: "Bumbu Dapur", stok: 20, expiredDate: "2026-08-20", lokasi: "Rak C-01", harga: 18000 },
-  { kode: "BRG-006", nama: "Mentega Serbaguna", kategori: "Bumbu Dapur", stok: 10, expiredDate: "2026-07-10", lokasi: "Rak C-02", harga: 22000 }
-];
 
 const CURRENT_DATE = new Date("2026-07-13"); // Anchor date based on system local time
 
 export default function BarangExpired() {
-  const [items, setItems] = useState(INITIAL_EXPIRED_ITEMS);
+  const [items, setItems] = useState([]);
   const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  const loadExpiredItems = async () => {
+    try {
+      setLoading(true);
+      const response = await getExpiredAlert();
+      setItems(response.data);
+    } catch (error) {
+      console.error(error);
+      alert("Gagal mengambil data barang expired");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadExpiredItems();
+  }, []);
 
   const processedItems = useMemo(() => {
     return items.map(item => {
