@@ -38,9 +38,9 @@ export default function Dashbboard() {
             <Package className="h-6 w-6" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Barang</div>
-            <div className="text-3xl font-extrabold text-slate-800 mt-1">{stats.totalBarang}</div>
-            <div className="text-[10px] text-slate-400 mt-0.5 font-medium">Semua Barang</div>
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Barang</div>
+            <div className="text-3xl font-extrabold text-slate-850 mt-1">{stats.totalBarang}</div>
+            <div className="text-[10px] text-slate-500 mt-0.5 font-medium">Semua Barang</div>
           </div>
         </div>
 
@@ -50,9 +50,9 @@ export default function Dashbboard() {
             <ArrowDownLeft className="h-6 w-6" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Barang Masuk</div>
-            <div className="text-3xl font-extrabold text-slate-800 mt-1">{stats.barangMasuk}</div>
-            <div className="text-[10px] text-slate-400 mt-0.5 font-medium">Bulan Ini</div>
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Barang Masuk</div>
+            <div className="text-3xl font-extrabold text-slate-850 mt-1">{stats.barangMasuk}</div>
+            <div className="text-[10px] text-slate-500 mt-0.5 font-medium">Bulan Ini</div>
           </div>
         </div>
 
@@ -62,9 +62,9 @@ export default function Dashbboard() {
             <ArrowUpRight className="h-6 w-6" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Barang Keluar</div>
-            <div className="text-3xl font-extrabold text-slate-800 mt-1">{stats.barangKeluar}</div>
-            <div className="text-[10px] text-slate-400 mt-0.5 font-medium">Bulan Ini</div>
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Barang Keluar</div>
+            <div className="text-3xl font-extrabold text-slate-850 mt-1">{stats.barangKeluar}</div>
+            <div className="text-[10px] text-slate-500 mt-0.5 font-medium">Bulan Ini</div>
           </div>
         </div>
 
@@ -74,9 +74,9 @@ export default function Dashbboard() {
             <AlertTriangle className="h-6 w-6 animate-bounce" />
           </div>
           <div>
-            <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Stok Kritis</div>
+            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Stok Kritis</div>
             <div className="text-3xl font-extrabold text-rose-600 mt-1">{stats.stokKritis}</div>
-            <div className="text-[10px] text-rose-400 mt-0.5 font-medium">Perlu Perhatian</div>
+            <div className="text-[10px] text-rose-600 mt-0.5 font-medium">Perlu Perhatian</div>
           </div>
         </div>
       </div>

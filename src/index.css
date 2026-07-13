@@ -19,6 +19,17 @@ body {
 }
 
 :root {
+  --text: #334155; /* Slate 700 for regular text */
+  --text-h: #1e293b; /* Slate 800 for solid headings */
+  --bg: #f8fafc; /* Light gray background */
+  --border: #e2e8f0; /* Crisp borders */
+  --code-bg: #f1f5f9;
+  --accent: #10b981;
+  --accent-bg: rgba(16, 185, 129, 0.1);
+  --accent-border: rgba(16, 185, 129, 0.2);
+  --social-bg: rgba(241, 245, 249, 0.8);
+  --shadow: rgba(0, 0, 0, 0.05) 0 10px 15px -3px, rgba(0, 0, 0, 0.02) 0 4px 6px -2px;
+
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
 
