@@ -79,7 +79,7 @@ export default function Login() {
             />
           </svg>
 
-          <h1 className="mt-4 text-6xl font-bold text-white tracking-wide">
+          <h1 className="mt-4 text-6xl font-bold !text-white tracking-wide">
             WMS
           </h1>
 
@@ -91,7 +91,7 @@ export default function Login() {
 
         {/* Welcome */}
         <div className="mb-8 text-center">
-          <h2 className="text-3xl font-semibold text-white">
+          <h2 className="text-3xl font-semibold !text-white">
             Selamat Datang!
           </h2>
 
