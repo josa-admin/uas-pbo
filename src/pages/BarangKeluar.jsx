@@ -1,25 +1,25 @@
 import { useState, useEffect } from "react";
-import { 
-  ArrowLeft, 
-  Plus, 
-  Trash2, 
-  Calendar, 
-  Building2, 
-  Check, 
-  X, 
-  ChevronRight, 
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Calendar,
+  Building2,
+  Check,
+  X,
+  ChevronRight,
   PlusCircle,
   FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import {
   Dialog,
@@ -233,8 +233,8 @@ export default function BarangKeluar() {
               {toast.message}
             </p>
           </div>
-          <button 
-            onClick={() => setToast({ show: false, message: "", type: "success" })} 
+          <button
+            onClick={() => setToast({ show: false, message: "", type: "success" })}
             className="text-slate-400 hover:text-slate-200 ml-4 focus:outline-none"
           >
             <X className="h-4 w-4" />
@@ -244,7 +244,7 @@ export default function BarangKeluar() {
 
       {/* Header section with back navigation and input trigger button */}
       <div className="flex items-center justify-between">
-        <button 
+        <button
           onClick={() => window.history.back()}
           className="flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 text-sm font-semibold transition-colors cursor-pointer"
         >
@@ -252,7 +252,7 @@ export default function BarangKeluar() {
           <span>Kembali ke Daftar</span>
         </button>
 
-        <Button 
+        <Button
           onClick={handleConfirm}
           className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium shadow-sm rounded-lg flex items-center gap-1.5 h-9 px-4 cursor-pointer"
         >
@@ -268,7 +268,7 @@ export default function BarangKeluar() {
           <div className="space-y-1.5">
             <Label className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Tanggal</Label>
             <div className="relative">
-              <Input 
+              <Input
                 type="date"
                 value={tanggal}
                 onChange={(e) => setTanggal(e.target.value)}
@@ -282,7 +282,7 @@ export default function BarangKeluar() {
           <div className="space-y-1.5">
             <Label className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Tujuan / Penerima</Label>
             <div className="relative">
-              <Input 
+              <Input
                 type="text"
                 placeholder="Masukkan tujuan / penerima"
                 value={tujuan}
@@ -391,7 +391,7 @@ export default function BarangKeluar() {
                   <span>Tambah Barang Keluar</span>
                 </DialogTitle>
               </DialogHeader>
-              
+
               <form onSubmit={handleAddItem} className="space-y-4 pt-2">
                 <div className="space-y-1.5">
                   <Label className="text-xs text-slate-500 font-semibold uppercase">Pilih Barang</Label>
@@ -414,7 +414,7 @@ export default function BarangKeluar() {
                   <div className="space-y-3.5 border-l-2 border-emerald-500 pl-3.5 py-1">
                     <div className="space-y-1">
                       <Label className="text-xs text-slate-500 font-medium">Kode Barang Custom</Label>
-                      <Input 
+                      <Input
                         value={customKode}
                         onChange={(e) => setCustomKode(e.target.value)}
                         placeholder="Contoh: BR0099"
@@ -424,7 +424,7 @@ export default function BarangKeluar() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-slate-500 font-medium">Nama Barang</Label>
-                      <Input 
+                      <Input
                         value={customNama}
                         onChange={(e) => setCustomNama(e.target.value)}
                         placeholder="Nama barang..."
@@ -434,7 +434,7 @@ export default function BarangKeluar() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-slate-500 font-medium">Stok Tersedia</Label>
-                      <Input 
+                      <Input
                         type="number"
                         min="1"
                         value={customStock}
@@ -448,8 +448,8 @@ export default function BarangKeluar() {
 
                 <div className="space-y-1.5">
                   <Label className="text-xs text-slate-500 font-semibold uppercase">Jumlah Keluar</Label>
-                  <Input 
-                    type="number" 
+                  <Input
+                    type="number"
                     min="1"
                     value={addQty}
                     onChange={(e) => setAddQty(Math.max(1, parseInt(e.target.value) || 1))}
@@ -464,8 +464,8 @@ export default function BarangKeluar() {
                       Batal
                     </Button>
                   </DialogClose>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium h-9 px-4 cursor-pointer"
                   >
                     Tambah ke Daftar
@@ -479,14 +479,14 @@ export default function BarangKeluar() {
 
       {/* Action Buttons */}
       <div className="flex items-center justify-end gap-3.5">
-        <Button 
+        <Button
           variant="outline"
           onClick={handleReset}
           className="border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold text-xs h-9 px-6 rounded-lg cursor-pointer"
         >
           Batal
         </Button>
-        <Button 
+        <Button
           onClick={handleConfirm}
           className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs h-9 px-6 rounded-lg cursor-pointer shadow-sm"
         >

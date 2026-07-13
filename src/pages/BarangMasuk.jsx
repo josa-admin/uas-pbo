@@ -1,26 +1,26 @@
 import { useState, useEffect } from "react";
-import { 
-  Package, 
-  Plus, 
-  Trash2, 
-  History, 
-  Save, 
-  Check, 
-  X, 
-  Layers, 
-  FileText, 
-  Truck, 
-  Printer 
+import {
+  Package,
+  Plus,
+  Trash2,
+  History,
+  Save,
+  Check,
+  X,
+  Layers,
+  FileText,
+  Truck,
+  Printer
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from "@/components/ui/select";
 import {
   Dialog,
@@ -225,8 +225,8 @@ export default function BarangMasuk() {
               {toast.message}
             </p>
           </div>
-          <button 
-            onClick={() => setToast({ show: false, message: "", type: "success" })} 
+          <button
+            onClick={() => setToast({ show: false, message: "", type: "success" })}
             className="text-slate-400 hover:text-slate-200 ml-4 focus:outline-none"
           >
             <X className="h-4 w-4" />
@@ -242,9 +242,9 @@ export default function BarangMasuk() {
           </div>
           <h1 className="text-2xl font-bold text-slate-800 mt-1">Input Barang Masuk</h1>
         </div>
-        
+
         <div className="flex items-center gap-3">
-          <Button 
+          <Button
             onClick={() => handleSaveTransaction(false)}
             className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium shadow-sm transition-colors duration-150 rounded-lg flex items-center gap-2 h-9 px-4 cursor-pointer"
           >
@@ -259,7 +259,7 @@ export default function BarangMasuk() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <div className="space-y-1.5">
             <Label className="text-slate-500 text-xs font-semibold uppercase tracking-wider">No. PO</Label>
-            <Input 
+            <Input
               value={noPo}
               onChange={(e) => setNoPo(e.target.value)}
               placeholder="PO-YYYYMMDD-XXX"
@@ -284,7 +284,7 @@ export default function BarangMasuk() {
 
           <div className="space-y-1.5">
             <Label className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Tanggal Masuk</Label>
-            <Input 
+            <Input
               type="date"
               value={tanggalMasuk}
               onChange={(e) => setTanggalMasuk(e.target.value)}
@@ -294,7 +294,7 @@ export default function BarangMasuk() {
 
           <div className="space-y-1.5">
             <Label className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Petugas Penerima</Label>
-            <Input 
+            <Input
               value={petugas}
               disabled
               className="h-10 bg-slate-50 border-slate-200 text-slate-400 text-sm cursor-not-allowed font-medium"
@@ -315,7 +315,7 @@ export default function BarangMasuk() {
           {/* Add Item Trigger Dialog */}
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
-              <Button 
+              <Button
                 variant="outline"
                 className="border-emerald-600/30 text-emerald-600 hover:bg-emerald-50 text-xs font-semibold h-8 rounded-lg flex items-center gap-1.5 cursor-pointer"
               >
@@ -352,7 +352,7 @@ export default function BarangMasuk() {
                   <div className="space-y-3.5 border-l-2 border-emerald-500 pl-3.5 py-1">
                     <div className="space-y-1">
                       <Label className="text-xs text-slate-500 font-medium">Kode Barang Custom</Label>
-                      <Input 
+                      <Input
                         value={customKode}
                         onChange={(e) => setCustomKode(e.target.value)}
                         placeholder="Contoh: BR0099"
@@ -362,7 +362,7 @@ export default function BarangMasuk() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-slate-500 font-medium">Nama Barang</Label>
-                      <Input 
+                      <Input
                         value={customNama}
                         onChange={(e) => setCustomNama(e.target.value)}
                         placeholder="Nama barang..."
@@ -372,7 +372,7 @@ export default function BarangMasuk() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-slate-500 font-medium">Harga Satuan (IDR)</Label>
-                      <Input 
+                      <Input
                         type="number"
                         value={customHarga}
                         onChange={(e) => setCustomHarga(e.target.value)}
@@ -386,8 +386,8 @@ export default function BarangMasuk() {
 
                 <div className="space-y-1.5">
                   <Label className="text-xs text-slate-500 font-semibold uppercase">Jumlah Diterima</Label>
-                  <Input 
-                    type="number" 
+                  <Input
+                    type="number"
                     min="1"
                     value={addQty}
                     onChange={(e) => setAddQty(Math.max(1, parseInt(e.target.value) || 1))}
@@ -402,8 +402,8 @@ export default function BarangMasuk() {
                       Batal
                     </Button>
                   </DialogClose>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium h-9 px-4 cursor-pointer"
                   >
                     Tambah ke Daftar
@@ -493,7 +493,7 @@ export default function BarangMasuk() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* History Link */}
         <div>
-          <button 
+          <button
             onClick={() => setIsHistoryOpen(true)}
             className="flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 text-xs font-semibold transition-colors duration-150 cursor-pointer"
           >
@@ -504,15 +504,15 @@ export default function BarangMasuk() {
 
         {/* Action Button Controls */}
         <div className="flex items-center gap-3 justify-end">
-          <Button 
+          <Button
             variant="outline"
             onClick={handleReset}
             className="border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold h-9 px-4 rounded-lg cursor-pointer"
           >
             Batal
           </Button>
-          
-          <Button 
+
+          <Button
             onClick={() => handleSaveTransaction(true)}
             className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs h-9 px-4 rounded-lg flex items-center gap-1.5 cursor-pointer shadow-sm"
           >
@@ -532,7 +532,7 @@ export default function BarangMasuk() {
               Peningkatan aktivitas penerimaan barang sebesar 12% dibanding kemarin.
             </p>
           </div>
-          
+
           <div className="flex items-center gap-10 mt-8 relative z-10">
             <div className="flex flex-col">
               <span className="text-[10px] text-emerald-100 uppercase tracking-widest font-semibold">Total Item</span>
@@ -540,7 +540,7 @@ export default function BarangMasuk() {
                 342 <span className="text-xs font-medium text-emerald-100">Unit</span>
               </span>
             </div>
-            
+
             <div className="h-8 w-px bg-emerald-500"></div>
 
             <div className="flex flex-col">
@@ -561,15 +561,15 @@ export default function BarangMasuk() {
           <div className="p-3 bg-slate-50 text-slate-500 rounded-xl mb-3 shadow-inner">
             <Layers className="h-5 w-5 text-emerald-600" />
           </div>
-          
+
           <h3 className="text-base font-bold text-slate-800">Kapasitas Gudang</h3>
           <p className="text-slate-400 text-xs mt-0.5 font-medium">Pemanfaatan Rak Saat Ini</p>
-          
+
           {/* Progress Bar */}
           <div className="w-full mt-5">
             <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
                 style={{ width: "72%" }}
               ></div>
             </div>
