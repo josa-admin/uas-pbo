@@ -7,7 +7,7 @@ import {
   BarChart3, 
   Search, 
   AlertTriangle, 
-  User 
+  Calendar 
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -19,7 +19,7 @@ export default function Sidebar() {
     { name: "Laporan", path: "/laporan", icon: BarChart3 },
     { name: "Pencarian Barang", path: "/pencarian-barang", icon: Search },
     { name: "Stok Kritis", path: "/stok-kritis", icon: AlertTriangle },
-    { name: "Profil", path: "/profil", icon: User },
+    { name: "Barang Expired", path: "/barang-expired", icon: Calendar },
   ];
 
   return (

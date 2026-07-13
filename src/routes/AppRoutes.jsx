@@ -6,7 +6,7 @@ import StokBarang from "../pages/StokBarang";
 import BarangMasuk from "../pages/BarangMasuk";
 import BarangKeluar from "../pages/BarangKeluar";
 import Laporan from "../pages/Laporan";
-import Profil from "../pages/Profil";
+import BarangExpired from "../pages/BarangExpired";
 import PencarianBarang from "../pages/PencarianBarang";
 import DashboardLayout from "../components/DashboardLayout";
 
@@ -26,7 +26,7 @@ export default function AppRoutes() {
           <Route path="/laporan" element={<Laporan />} />
           <Route path="/pencarian-barang" element={<PencarianBarang />} />
           <Route path="/stok-kritis" element={<StokBarang />} />
-          <Route path="/profil" element={<Profil />} />
+          <Route path="/barang-expired" element={<BarangExpired />} />
         </Route>
 
         {/* Redirect any other path to splash screen */}
