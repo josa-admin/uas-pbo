@@ -1,32 +1,307 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { 
-  Package, 
-  ArrowDownLeft, 
-  ArrowUpRight, 
-  AlertTriangle, 
+import {
+  Package,
+  ArrowDownLeft,
+  ArrowUpRight,
+  AlertTriangle,
   Plus,
   ArrowRight,
   TrendingUp,
-  FileText
+  FileText,
 } from "lucide-react";
+import api from "@/api/api";
+import ENDPOINTS from "@/api/endpoints";
+
+const normalizeListData = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.results)) return payload.results;
+  if (payload && Array.isArray(payload.data)) return payload.data;
+  return [];
+};
+
+const formatDate = (value) => {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+const getStatus = (remainingQuantity) => {
+  const quantity = Number(remainingQuantity ?? 0);
+
+  if (quantity === 0) return "Habis";
+  if (quantity <= 10) return "Kritis";
+  if (quantity <= 20) return "Menipis";
+  return "Normal";
+};
+
+const getMonthKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+const getMonthLabel = (date) => {
+  const labels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
+  return labels[date.getMonth()];
+};
+
+const getTransactionDate = (item) =>
+  item.transaction_date ||
+  item.created_at ||
+  item.date ||
+  item.received_date ||
+  item.updated_at ||
+  item.expired_date ||
+  "";
+
+const getDocumentNumber = (item) =>
+  item.document_number ||
+  item.doc_number ||
+  item.reference_number ||
+  item.documentNo ||
+  item.id ||
+  "-";
+
+const getProductName = (item) =>
+  item.product_name ||
+  item.productName ||
+  item.product?.name ||
+  item.name ||
+  item.product ||
+  "-";
+
+const getQuantityValue = (item) => Number(item.quantity ?? item.qty ?? item.total_quantity ?? item.amount ?? 0);
+
+const getPetugasName = (item) =>
+  item.user_name ||
+  item.user?.username ||
+  item.user?.name ||
+  item.created_by ||
+  item.staff_name ||
+  item.operator ||
+  "-";
 
 export default function Dashbboard() {
-  // Sample Data matching the reference design
-  const [stats, setStats] = useState({
-    totalBarang: 250,
-    barangMasuk: 120,
-    barangKeluar: 80,
-    stokKritis: 12
-  });
+  const [stockBatches, setStockBatches] = useState([]);
+  const [inbounds, setInbounds] = useState([]);
+  const [outbounds, setOutbounds] = useState([]);
+  const [expiredAlert, setExpiredAlert] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const recentTransactions = [
-    { tanggal: "14/06/2024 10:20", jenis: "Masuk", kode: "BRG001", nama: "Kopi Premium", qty: 10, petugas: "Admin" },
-    { tanggal: "14/06/2024 09:15", jenis: "Keluar", kode: "BRG002", nama: "Susu Prem", qty: 2, petugas: "Staff Gudang" },
-    { tanggal: "13/06/2024 16:45", jenis: "Masuk", kode: "BRG003", nama: "Minyak Goreng", qty: 5, petugas: "Admin" },
-    { tanggal: "13/06/2024 14:20", jenis: "Keluar", kode: "BRG001", nama: "Kopi Premium", qty: 3, petugas: "Staff Gudang" },
-    { tanggal: "12/06/2024 11:05", jenis: "Masuk", kode: "BRG004", nama: "Roti Tawar", qty: 50, petugas: "Admin" }
-  ];
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        setLoading(true);
+        const [stockBatchResponse, inboundResponse, outboundResponse, expiredResponse] = await Promise.all([
+          api.get(ENDPOINTS.STOCK_BATCH),
+          api.get(ENDPOINTS.INBOUND),
+          api.get(ENDPOINTS.OUTBOUND),
+          api.get(ENDPOINTS.EXPIRED_ALERT),
+        ]);
+
+        setStockBatches(normalizeListData(stockBatchResponse.data));
+        setInbounds(normalizeListData(inboundResponse.data));
+        setOutbounds(normalizeListData(outboundResponse.data));
+        setExpiredAlert(normalizeListData(expiredResponse.data));
+      } catch (error) {
+        console.error("Gagal mengambil data dashboard", error);
+        setStockBatches([]);
+        setInbounds([]);
+        setOutbounds([]);
+        setExpiredAlert([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboardData();
+  }, []);
+
+  const stats = useMemo(() => {
+    const totalBarang = stockBatches.length;
+    const barangMasuk = inbounds.length;
+    const barangKeluar = outbounds.length;
+    const stokKritis = stockBatches.filter((item) => Number(item.remaining_quantity ?? item.remainingQuantity ?? 0) <= 10).length;
+
+    return { totalBarang, barangMasuk, barangKeluar, stokKritis };
+  }, [stockBatches, inbounds, outbounds]);
+
+  const months = useMemo(() => {
+    const result = [];
+    const now = new Date();
+
+    for (let index = 5; index >= 0; index -= 1) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - index, 1);
+      result.push(monthDate);
+    }
+
+    return result;
+  }, []);
+
+  const monthlyInbound = useMemo(() => {
+    const grouped = months.reduce((acc, month) => {
+      acc[getMonthKey(month)] = 0;
+      return acc;
+    }, {});
+
+    inbounds.forEach((item) => {
+      const datetime = getTransactionDate(item);
+      const date = new Date(datetime);
+      if (Number.isNaN(date.getTime())) return;
+
+      const key = getMonthKey(date);
+      if (grouped[key] !== undefined) {
+        grouped[key] += getQuantityValue(item);
+      }
+    });
+
+    return months.map((month) => grouped[getMonthKey(month)] ?? 0);
+  }, [inbounds, months]);
+
+  const monthlyOutbound = useMemo(() => {
+    const grouped = months.reduce((acc, month) => {
+      acc[getMonthKey(month)] = 0;
+      return acc;
+    }, {});
+
+    outbounds.forEach((item) => {
+      const datetime = getTransactionDate(item);
+      const date = new Date(datetime);
+      if (Number.isNaN(date.getTime())) return;
+
+      const key = getMonthKey(date);
+      if (grouped[key] !== undefined) {
+        grouped[key] += getQuantityValue(item);
+      }
+    });
+
+    return months.map((month) => grouped[getMonthKey(month)] ?? 0);
+  }, [outbounds, months]);
+
+  const chartMaxValue = Math.max(...monthlyInbound, ...monthlyOutbound, 1);
+  const xPositions = [60, 140, 220, 300, 380, 460];
+  const chartHeight = 200;
+  const chartTop = 20;
+  const chartBottom = 160;
+  const chartRange = chartBottom - chartTop;
+
+  const getYPosition = (value) => chartBottom - (value / chartMaxValue) * chartRange;
+
+  const createPath = (values) => {
+    const points = values.map((value, index) => ({ x: xPositions[index], y: getYPosition(value) }));
+
+    if (points.length === 0) return "";
+
+    return points.reduce((path, point, index) => {
+      if (index === 0) {
+        return `M ${point.x},${point.y}`;
+      }
+
+      return `${path} L ${point.x},${point.y}`;
+    }, "");
+  };
+
+  const inboundPath = useMemo(() => createPath(monthlyInbound), [monthlyInbound]);
+  const outboundPath = useMemo(() => createPath(monthlyOutbound), [monthlyOutbound]);
+
+  const inboundPoints = useMemo(
+    () => monthlyInbound.map((value, index) => ({ x: xPositions[index], y: getYPosition(value) })),
+    [monthlyInbound]
+  );
+
+  const outboundPoints = useMemo(
+    () => monthlyOutbound.map((value, index) => ({ x: xPositions[index], y: getYPosition(value) })),
+    [monthlyOutbound]
+  );
+
+  const stockSummary = useMemo(() => {
+    const normalCount = stockBatches.filter((item) => getStatus(item.remaining_quantity ?? item.remainingQuantity ?? 0) === "Normal").length;
+    const menipisCount = stockBatches.filter((item) => getStatus(item.remaining_quantity ?? item.remainingQuantity ?? 0) === "Menipis").length;
+    const kritisCount = stockBatches.filter((item) => getStatus(item.remaining_quantity ?? item.remainingQuantity ?? 0) === "Kritis" || getStatus(item.remaining_quantity ?? item.remainingQuantity ?? 0) === "Habis").length;
+
+    const total = stockBatches.length || 1;
+    const normalPercent = Math.round((normalCount / total) * 100);
+    const menipisPercent = Math.round((menipisCount / total) * 100);
+    const kritisPercent = Math.round((kritisCount / total) * 100);
+
+    return { normalCount, menipisCount, kritisCount, normalPercent, menipisPercent, kritisPercent, total };
+  }, [stockBatches]);
+
+  const circumference = 2 * Math.PI * 50;
+  const donutSegments = useMemo(() => {
+    const segments = [
+      {
+        color: "#10b981",
+        count: stockSummary.normalCount,
+        percent: stockSummary.normalPercent,
+      },
+      {
+        color: "#f59e0b",
+        count: stockSummary.menipisCount,
+        percent: stockSummary.menipisPercent,
+      },
+      {
+        color: "#f43f5e",
+        count: stockSummary.kritisCount,
+        percent: stockSummary.kritisPercent,
+      },
+    ];
+
+    let offset = circumference;
+
+    return segments.map((segment) => {
+      const dashOffset = offset;
+      offset -= (segment.percent / 100) * circumference;
+      return { ...segment, dashOffset };
+    });
+  }, [circumference, stockSummary]);
+
+  const recentTransactions = useMemo(() => {
+    const merged = [
+      ...inbounds.map((item) => ({
+        tanggal: formatDate(getTransactionDate(item)),
+        jenis: "Masuk",
+        kode: getDocumentNumber(item),
+        nama: getProductName(item),
+        qty: getQuantityValue(item),
+        petugas: getPetugasName(item),
+        timestamp: new Date(getTransactionDate(item) || 0).getTime(),
+      })),
+      ...outbounds.map((item) => ({
+        tanggal: formatDate(getTransactionDate(item)),
+        jenis: "Keluar",
+        kode: getDocumentNumber(item),
+        nama: getProductName(item),
+        qty: getQuantityValue(item),
+        petugas: getPetugasName(item),
+        timestamp: new Date(getTransactionDate(item) || 0).getTime(),
+      })),
+    ].sort((left, right) => right.timestamp - left.timestamp);
+
+    return merged.slice(0, 10);
+  }, [inbounds, outbounds]);
+
+  const criticalItems = useMemo(() => {
+    return stockBatches
+      .filter((item) => Number(item.remaining_quantity ?? item.remainingQuantity ?? 0) <= 10)
+      .sort((left, right) => Number(right.remaining_quantity ?? right.remainingQuantity ?? 0) - Number(left.remaining_quantity ?? left.remainingQuantity ?? 0))
+      .slice(0, 5)
+      .map((item) => ({
+        productName: item.product_name || item.productName || "-",
+        remainingQuantity: Number(item.remaining_quantity ?? item.remainingQuantity ?? 0),
+        binName: item.bin_name || item.binName || "-",
+      }));
+  }, [stockBatches]);
+
+  const safeStockCount = useMemo(() => {
+    return stockBatches.filter((item) => Number(item.remaining_quantity ?? item.remainingQuantity ?? 0) > 20).length;
+  }, [stockBatches]);
 
   return (
     <div className="space-y-6">
@@ -39,7 +314,7 @@ export default function Dashbboard() {
           </div>
           <div>
             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Barang</div>
-            <div className="text-3xl font-extrabold text-slate-850 mt-1">{stats.totalBarang}</div>
+            <div className="text-3xl font-extrabold text-slate-850 mt-1">{loading ? "..." : stats.totalBarang}</div>
             <div className="text-[10px] text-slate-500 mt-0.5 font-medium">Semua Barang</div>
           </div>
         </div>
@@ -51,7 +326,7 @@ export default function Dashbboard() {
           </div>
           <div>
             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Barang Masuk</div>
-            <div className="text-3xl font-extrabold text-slate-850 mt-1">{stats.barangMasuk}</div>
+            <div className="text-3xl font-extrabold text-slate-850 mt-1">{loading ? "..." : stats.barangMasuk}</div>
             <div className="text-[10px] text-slate-500 mt-0.5 font-medium">Bulan Ini</div>
           </div>
         </div>
@@ -63,7 +338,7 @@ export default function Dashbboard() {
           </div>
           <div>
             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Barang Keluar</div>
-            <div className="text-3xl font-extrabold text-slate-850 mt-1">{stats.barangKeluar}</div>
+            <div className="text-3xl font-extrabold text-slate-850 mt-1">{loading ? "..." : stats.barangKeluar}</div>
             <div className="text-[10px] text-slate-500 mt-0.5 font-medium">Bulan Ini</div>
           </div>
         </div>
@@ -75,7 +350,7 @@ export default function Dashbboard() {
           </div>
           <div>
             <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Stok Kritis</div>
-            <div className="text-3xl font-extrabold text-rose-600 mt-1">{stats.stokKritis}</div>
+            <div className="text-3xl font-extrabold text-rose-600 mt-1">{loading ? "..." : stats.stokKritis}</div>
             <div className="text-[10px] text-rose-600 mt-0.5 font-medium">Perlu Perhatian</div>
           </div>
         </div>
@@ -116,42 +391,23 @@ export default function Dashbboard() {
               <text x="15" y="165" fill="#94a3b8" fontSize="8" fontWeight="600">0</text>
 
               {/* X Axis Labels */}
-              <text x="60" y="180" fill="#94a3b8" fontSize="8" fontWeight="600">Jan</text>
-              <text x="140" y="180" fill="#94a3b8" fontSize="8" fontWeight="600">Feb</text>
-              <text x="220" y="180" fill="#94a3b8" fontSize="8" fontWeight="600">Mar</text>
-              <text x="300" y="180" fill="#94a3b8" fontSize="8" fontWeight="600">Apr</text>
-              <text x="380" y="180" fill="#94a3b8" fontSize="8" fontWeight="600">Mei</text>
-              <text x="460" y="180" fill="#94a3b8" fontSize="8" fontWeight="600">Jun</text>
+              {months.map((month, index) => (
+                <text key={getMonthKey(month)} x={xPositions[index]} y="180" fill="#94a3b8" fontSize="8" fontWeight="600">
+                  {getMonthLabel(month)}
+                </text>
+              ))}
 
               {/* Green Line - Barang Masuk */}
-              <path 
-                d="M 60,110 Q 140,80 220,105 T 380,85 T 460,95" 
-                fill="none" 
-                stroke="#10b981" 
-                strokeWidth="3.5" 
-                strokeLinecap="round" 
-              />
-              <circle cx="60" cy="110" r="4.5" fill="#10b981" stroke="#ffffff" strokeWidth="1.5" />
-              <circle cx="140" cy="90" r="4.5" fill="#10b981" stroke="#ffffff" strokeWidth="1.5" />
-              <circle cx="220" cy="105" r="4.5" fill="#10b981" stroke="#ffffff" strokeWidth="1.5" />
-              <circle cx="300" cy="85" r="4.5" fill="#10b981" stroke="#ffffff" strokeWidth="1.5" />
-              <circle cx="380" cy="112" r="4.5" fill="#10b981" stroke="#ffffff" strokeWidth="1.5" />
-              <circle cx="460" cy="95" r="4.5" fill="#10b981" stroke="#ffffff" strokeWidth="1.5" />
+              <path d={inboundPath} fill="none" stroke="#10b981" strokeWidth="3.5" strokeLinecap="round" />
+              {inboundPoints.map((point, index) => (
+                <circle key={`inbound-${index}`} cx={point.x} cy={point.y} r="4.5" fill="#10b981" stroke="#ffffff" strokeWidth="1.5" />
+              ))}
 
               {/* Orange Line - Barang Keluar */}
-              <path 
-                d="M 60,140 Q 140,115 220,130 T 380,122 T 460,115" 
-                fill="none" 
-                stroke="#f59e0b" 
-                strokeWidth="3.5" 
-                strokeLinecap="round" 
-              />
-              <circle cx="60" cy="140" r="4.5" fill="#f59e0b" stroke="#ffffff" strokeWidth="1.5" />
-              <circle cx="140" cy="120" r="4.5" fill="#f59e0b" stroke="#ffffff" strokeWidth="1.5" />
-              <circle cx="220" cy="130" r="4.5" fill="#f59e0b" stroke="#ffffff" strokeWidth="1.5" />
-              <circle cx="300" cy="110" r="4.5" fill="#f59e0b" stroke="#ffffff" strokeWidth="1.5" />
-              <circle cx="380" cy="125" r="4.5" fill="#f59e0b" stroke="#ffffff" strokeWidth="1.5" />
-              <circle cx="460" cy="115" r="4.5" fill="#f59e0b" stroke="#ffffff" strokeWidth="1.5" />
+              <path d={outboundPath} fill="none" stroke="#f59e0b" strokeWidth="3.5" strokeLinecap="round" />
+              {outboundPoints.map((point, index) => (
+                <circle key={`outbound-${index}`} cx={point.x} cy={point.y} r="4.5" fill="#f59e0b" stroke="#ffffff" strokeWidth="1.5" />
+              ))}
             </svg>
           </div>
         </div>
@@ -168,23 +424,25 @@ export default function Dashbboard() {
             <svg className="w-36 h-36 transform -rotate-90">
               {/* Outer track */}
               <circle cx="72" cy="72" r="50" fill="transparent" stroke="#f1f5f9" strokeWidth="14" />
-              
-              {/* Green Segment (Stok Normal 72%) */}
-              <circle cx="72" cy="72" r="50" fill="transparent" stroke="#10b981" strokeWidth="14"
-                strokeDasharray="314.15" strokeDashoffset="87.96" strokeLinecap="round" />
-                
-              {/* Orange Segment (Stok Menipis 22%) */}
-              <circle cx="72" cy="72" r="50" fill="transparent" stroke="#f59e0b" strokeWidth="14"
-                strokeDasharray="314.15" strokeDashoffset="245.03" strokeLinecap="round" 
-                className="transform origin-center rotate-[259.2deg]"/>
 
-              {/* Red Segment (Stok Kritis 6%) */}
-              <circle cx="72" cy="72" r="50" fill="transparent" stroke="#f43f5e" strokeWidth="14"
-                strokeDasharray="314.15" strokeDashoffset="295.3" strokeLinecap="round" 
-                className="transform origin-center rotate-[338.4deg]" />
+              {donutSegments.map((segment, index) => (
+                <circle
+                  key={segment.color}
+                  cx="72"
+                  cy="72"
+                  r="50"
+                  fill="transparent"
+                  stroke={segment.color}
+                  strokeWidth="14"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={segment.dashOffset}
+                  strokeLinecap="round"
+                  className={index === 0 ? "" : "transform origin-center rotate-[0deg]"}
+                />
+              ))}
             </svg>
             <div className="absolute flex flex-col justify-center items-center">
-              <span className="text-3xl font-extrabold text-slate-800 leading-none">250</span>
+              <span className="text-3xl font-extrabold text-slate-800 leading-none">{loading ? "..." : stockSummary.total}</span>
               <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-1.5">Total</span>
             </div>
           </div>
@@ -195,19 +453,19 @@ export default function Dashbboard() {
               <span className="flex items-center gap-2 text-slate-500">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Stok Normal
               </span>
-              <span className="text-slate-800">180 (72%)</span>
+              <span className="text-slate-800">{loading ? "..." : `${stockSummary.normalCount} (${stockSummary.normalPercent}%)`}</span>
             </div>
             <div className="flex justify-between items-center text-xs font-semibold">
               <span className="flex items-center gap-2 text-slate-500">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> Stok Menipis
               </span>
-              <span className="text-slate-800">56 (22%)</span>
+              <span className="text-slate-800">{loading ? "..." : `${stockSummary.menipisCount} (${stockSummary.menipisPercent}%)`}</span>
             </div>
             <div className="flex justify-between items-center text-xs font-semibold">
               <span className="flex items-center gap-2 text-slate-500">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span> Stok Kritis
               </span>
-              <span className="text-slate-800">14 (6%)</span>
+              <span className="text-slate-800">{loading ? "..." : `${stockSummary.kritisCount} (${stockSummary.kritisPercent}%)`}</span>
             </div>
           </div>
         </div>
@@ -230,7 +488,7 @@ export default function Dashbboard() {
                 <tr className="bg-slate-50 text-slate-500 font-semibold uppercase border-b border-slate-100">
                   <th className="py-3 px-4">Tanggal</th>
                   <th className="py-3 px-4">Jenis</th>
-                  <th className="py-3 px-4">Kode Barang</th>
+                  <th className="py-3 px-4">Nomor Dokumen</th>
                   <th className="py-3 px-4">Nama Barang</th>
                   <th className="py-3 px-4 text-right">Jumlah</th>
                   <th className="py-3 px-4">Petugas</th>
@@ -238,7 +496,7 @@ export default function Dashbboard() {
               </thead>
               <tbody className="divide-y divide-slate-50 font-medium">
                 {recentTransactions.map((tx, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors text-slate-700">
+                  <tr key={`${tx.jenis}-${tx.kode}-${idx}`} className="hover:bg-slate-50/50 transition-colors text-slate-700">
                     <td className="py-3 px-4 text-slate-400">{tx.tanggal}</td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
@@ -268,21 +526,23 @@ export default function Dashbboard() {
           </div>
 
           <div className="space-y-3">
-            <div className="rounded-xl border border-rose-100 bg-rose-50/20 p-4">
-              <div className="text-xs font-bold text-rose-700 uppercase">Susu Kental Manis</div>
-              <div className="text-[10px] text-slate-400 mt-1 font-semibold">Tersisa 2 Kaleng di Rak B-01</div>
-              <Link to="/stok-kritis" className="text-[10px] font-bold text-rose-600 hover:underline mt-2 inline-block">
-                Lihat Semua Stok Kritis →
-              </Link>
-            </div>
-            
-            <div className="rounded-xl border border-amber-100 bg-amber-50/20 p-4">
-              <div className="text-xs font-bold text-amber-700 uppercase">Teh Celup Herbal</div>
-              <div className="text-[10px] text-slate-400 mt-1 font-semibold">Tersisa 5 Kotak di Rak A-02</div>
-              <Link to="/stok-kritis" className="text-[10px] font-bold text-amber-600 hover:underline mt-2 inline-block">
-                Lihat Semua Stok Kritis →
-              </Link>
-            </div>
+            {criticalItems.length > 0 ? (
+              criticalItems.map((item, index) => (
+                <div key={`${item.productName}-${index}`} className="rounded-xl border border-rose-100 bg-rose-50/20 p-4">
+                  <div className="text-xs font-bold text-rose-700 uppercase">{item.productName}</div>
+                  <div className="text-[10px] text-slate-400 mt-1 font-semibold">
+                    Tersisa {item.remainingQuantity} unit di {item.binName}
+                  </div>
+                  <Link to="/stok-kritis" className="text-[10px] font-bold text-rose-600 hover:underline mt-2 inline-block">
+                    Lihat Semua Stok Kritis →
+                  </Link>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-xl border border-slate-100 bg-slate-50/20 p-4 text-sm text-slate-500">
+                Tidak ada stok kritis saat ini.
+              </div>
+            )}
           </div>
 
           <div className="rounded-xl bg-emerald-600 p-4 text-white flex items-center gap-3">
@@ -290,8 +550,8 @@ export default function Dashbboard() {
               <TrendingUp className="h-5 w-5" />
             </div>
             <div>
-              <div className="text-xs font-semibold">Dalam Fast-Moving</div>
-              <div className="text-[10px] opacity-80 mt-0.5">Sebagian besar kategori stabil</div>
+              <div className="text-xs font-semibold">Jumlah Barang Aman</div>
+              <div className="text-[10px] opacity-80 mt-0.5">{loading ? "..." : `${safeStockCount} barang dengan stok di atas 20 unit`}</div>
             </div>
           </div>
         </div>

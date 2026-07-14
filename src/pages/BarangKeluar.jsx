@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   Plus,
@@ -9,7 +9,7 @@ import {
   X,
   ChevronRight,
   PlusCircle,
-  FileText
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
 } from "@/components/ui/select";
 import {
   Dialog,
@@ -30,208 +30,207 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import api from "@/api/api";
+import ENDPOINTS from "@/api/endpoints";
 
-// Available stock for selection
-const AVAILABLE_STOCK = [
-  { kode: "BR0001", nama: "Mouse Logitech MX Master 3", stock: 20 },
-  { kode: "BR0042", nama: "Mechanical Keyboard Keychron K2", stock: 15 },
-  { kode: "BR0015", nama: "Monitor ASUS ROG 27\"", stock: 8 },
-  { kode: "BR0089", nama: "Headset SteelSeries Arctis 7", stock: 12 },
-  { kode: "BR0102", nama: "SSD Samsung Evo 1TB", stock: 30 },
-];
+const normalizeListData = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.results)) return payload.results;
+  if (payload && Array.isArray(payload.data)) return payload.data;
+  return [];
+};
 
 export default function BarangKeluar() {
-  // Main form states
-  const [tanggal, setTanggal] = useState("2024-05-24");
+  const [tanggal, setTanggal] = useState(new Date().toISOString().split("T")[0]);
   const [tujuan, setTujuan] = useState("");
   const [petugas, setPetugas] = useState("Admin");
 
-  // Items table state
-  const [items, setItems] = useState([
-    { id: 1, kode: "BR0001", nama: "Mouse Logitech MX Master 3", qty: 5, stock: 20 }
-  ]);
+  const [items, setItems] = useState([]);
 
-  // Dialog and toast states
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
   const [outboundHistory, setOutboundHistory] = useState([]);
-
-  // Add Item form state
-  const [selectedItemOption, setSelectedItemOption] = useState("BR0001");
-  const [customKode, setCustomKode] = useState("");
-  const [customNama, setCustomNama] = useState("");
-  const [customStock, setCustomStock] = useState(10);
+  const [products, setProducts] = useState([]);
+  const [selectedItemOption, setSelectedItemOption] = useState("");
   const [addQty, setAddQty] = useState(1);
+  const [loading, setLoading] = useState(false);
 
-  // Load history from localStorage on mount
-  useEffect(() => {
-    const history = localStorage.getItem("wms_barang_keluar_history");
-    if (history) {
-      try {
-        setOutboundHistory(JSON.parse(history));
-      } catch (e) {
-        console.error("Failed to parse history", e);
-      }
-    }
-  }, []);
-
-  // Show Toast helper
   const showToastMsg = (msg, type = "success") => {
     setToast({ show: true, message: msg, type });
   };
 
-  // Auto-dismiss toast
-  useEffect(() => {
-    if (toast.show) {
-      const timer = setTimeout(() => {
-        setToast({ show: false, message: "", type: "success" });
-      }, 4000);
-      return () => clearTimeout(timer);
+  const loadProductsAndHistory = async () => {
+    try {
+      setLoading(true);
+      const [productRes, outboundRes] = await Promise.all([
+        api.get(ENDPOINTS.PRODUCT),
+        api.get(ENDPOINTS.OUTBOUND),
+      ]);
+
+      setProducts(normalizeListData(productRes.data));
+      const historyData = normalizeListData(outboundRes.data);
+      setOutboundHistory(
+        historyData.map((tx) => ({
+          id: tx.id,
+          txCode: tx.outbound_number,
+          tujuan: tx.destination,
+          tanggal: tx.created_at,
+          petugas,
+          items: (tx.items || []).map((item) => ({
+            kode: item.product_name || item.product || "-",
+            nama: item.product_name || item.product || "-",
+            qty: item.quantity,
+          })),
+          totalUnit: (tx.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+        }))
+      );
+    } catch (error) {
+      console.error(error);
+      showToastMsg("Gagal memuat data dari backend", "error");
+    } finally {
+      setLoading(false);
     }
-  }, [toast.show]);
-
-  // Handle Qty change directly in table with stock check
-  const handleQtyChange = (id, newQty) => {
-    const parsedQty = parseInt(newQty);
-    if (isNaN(parsedQty) || parsedQty < 1) return;
-
-    setItems(items.map(item => {
-      if (item.id === id) {
-        if (parsedQty > item.stock) {
-          showToastMsg(`Jumlah keluar tidak boleh melebihi stok tersedia (${item.stock} Unit).`, "error");
-          return { ...item, qty: item.stock };
-        }
-        return { ...item, qty: parsedQty };
-      }
-      return item;
-    }));
   };
 
-  // Handle Delete item from table
+  useEffect(() => {
+    loadProductsAndHistory();
+  }, []);
+
+  useEffect(() => {
+    if (!toast.show) return undefined;
+
+    const timer = window.setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [toast.show]);
+
+  const handleQtyChange = (id, newQty) => {
+    const parsedQty = parseInt(newQty, 10);
+    if (Number.isNaN(parsedQty) || parsedQty < 1) return;
+
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, qty: parsedQty } : item))
+    );
+  };
+
   const handleDeleteItem = (id) => {
-    setItems(items.filter(item => item.id !== id));
+    setItems((prev) => prev.filter((item) => item.id !== id));
     showToastMsg("Barang dihapus dari daftar pengeluaran.", "info");
   };
 
-  // Reset form
   const handleReset = () => {
-    setItems([
-      { id: 1, kode: "BR0001", nama: "Mouse Logitech MX Master 3", qty: 5, stock: 20 }
-    ]);
+    setItems([]);
     setTanggal(new Date().toISOString().split("T")[0]);
     setTujuan("");
     setPetugas("Admin");
+    setSelectedItemOption("");
+    setAddQty(1);
     showToastMsg("Form pengeluaran telah direset.", "info");
   };
 
-  // Add Item submit handler
   const handleAddItem = (e) => {
     e.preventDefault();
-    let newItem = {};
 
-    if (selectedItemOption === "custom") {
-      if (!customKode || !customNama || customStock < 1 || addQty < 1) {
-        alert("Mohon isi semua field.");
-        return;
-      }
-      if (addQty > customStock) {
-        showToastMsg(`Jumlah melebihi stok tersedia (${customStock} Unit).`, "error");
-        return;
-      }
-      newItem = {
-        id: Date.now(),
-        kode: customKode,
-        nama: customNama,
-        qty: parseInt(addQty),
-        stock: parseInt(customStock)
-      };
-    } else {
-      const predef = AVAILABLE_STOCK.find(item => item.kode === selectedItemOption);
-      if (!predef) return;
-      if (addQty > predef.stock) {
-        showToastMsg(`Jumlah melebihi stok tersedia (${predef.stock} Unit).`, "error");
-        return;
-      }
-      newItem = {
-        id: Date.now(),
-        kode: predef.kode,
-        nama: predef.nama,
-        qty: parseInt(addQty),
-        stock: predef.stock
-      };
-    }
-
-    // Check if product already exists in items table
-    const exists = items.find(item => item.kode === newItem.kode);
-    if (exists) {
-      showToastMsg(`Barang ${newItem.kode} sudah ada dalam daftar.`, "error");
+    if (!selectedItemOption) {
+      showToastMsg("Pilih barang terlebih dahulu.", "error");
       return;
     }
 
-    setItems([...items, newItem]);
-    setIsAddOpen(false);
+    const parsedQty = Number(addQty);
+    if (!Number.isFinite(parsedQty) || parsedQty < 1) {
+      showToastMsg("Jumlah keluar harus lebih dari 0.", "error");
+      return;
+    }
 
-    // Reset fields
-    setCustomKode("");
-    setCustomNama("");
-    setCustomStock(10);
+    const product = products.find((item) => String(item.id) === String(selectedItemOption));
+    if (!product) {
+      showToastMsg("Barang tidak ditemukan.", "error");
+      return;
+    }
+
+    const exists = items.some((item) => String(item.product) === String(product.id));
+    if (exists) {
+      showToastMsg(`Barang ${product.name} sudah ada dalam daftar.`, "error");
+      return;
+    }
+
+    const newItem = {
+      id: Date.now(),
+      product: product.id,
+      kode: product.id,
+      nama: product.name,
+      qty: parsedQty,
+      stock: null,
+    };
+
+    setItems((prev) => [...prev, newItem]);
+    setSelectedItemOption("");
     setAddQty(1);
+    setIsAddOpen(false);
 
     showToastMsg(`Berhasil menambahkan ${newItem.nama} ke daftar.`);
   };
 
-  // Confirm/Save transaction handler
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!tujuan.trim()) {
       showToastMsg("Gagal menyimpan: Tujuan / Penerima harus diisi.", "error");
       return;
     }
+
     if (items.length === 0) {
       showToastMsg("Gagal menyimpan: Daftar barang pengeluaran masih kosong.", "error");
       return;
     }
 
-    const txCode = `OUT-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(100 + Math.random() * 900)}`;
+    const invalidQty = items.some((item) => Number(item.qty) < 1);
+    if (invalidQty) {
+      showToastMsg("Jumlah keluar harus lebih dari 0.", "error");
+      return;
+    }
 
-    const transaction = {
-      id: Date.now(),
-      txCode,
-      tanggal,
-      tujuan,
-      petugas,
-      items,
-      totalUnit: items.reduce((sum, item) => sum + item.qty, 0)
-    };
+    try {
+      setLoading(true);
+      const payload = {
+        destination: tujuan.trim(),
+        outbound_date: tanggal,
+        notes: "",
+        items: items.map((item) => ({
+          product: item.product,
+          quantity: Number(item.qty),
+        })),
+      };
 
-    const newHistory = [transaction, ...outboundHistory];
-    setOutboundHistory(newHistory);
-    localStorage.setItem("wms_barang_keluar_history", JSON.stringify(newHistory));
-
-    showToastMsg(`Transaksi ${txCode} berhasil dicatat.`, "success");
-
-    // Reset fields for next outbound
-    setTujuan("");
-    setItems([
-      { id: 1, kode: "BR0001", nama: "Mouse Logitech MX Master 3", qty: 5, stock: 20 }
-    ]);
+      await api.post(ENDPOINTS.OUTBOUND, payload);
+      await loadProductsAndHistory();
+      setItems([]);
+      setTujuan("");
+      setSelectedItemOption("");
+      setAddQty(1);
+      showToastMsg("Transaksi berhasil dicatat.", "success");
+    } catch (error) {
+      console.error(error);
+      console.log(error.response?.data)
+      showToastMsg(JSON.stringify(error.response?.data)), 'error'
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="space-y-6 relative pb-16">
-      {/* Toast Notification Container */}
       {toast.show && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3.5 bg-[#1e293b] text-white px-5 py-4 rounded-xl shadow-xl border border-slate-700 animate-slide-in">
-          <div className={`p-1.5 rounded-full ${toast.type === 'error' ? 'bg-red-500/20 text-red-400' : toast.type === 'info' ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-            {toast.type === 'error' ? <X className="h-5 w-5" /> : <Check className="h-5 w-5" />}
+          <div className={`p-1.5 rounded-full ${toast.type === "error" ? "bg-red-500/20 text-red-400" : toast.type === "info" ? "bg-blue-500/20 text-blue-400" : "bg-emerald-500/20 text-emerald-400"}`}>
+            {toast.type === "error" ? <X className="h-5 w-5" /> : <Check className="h-5 w-5" />}
           </div>
           <div>
             <h4 className="text-sm font-semibold text-white">
-              {toast.type === 'error' ? 'Error' : toast.type === 'info' ? 'Informasi' : 'Data Disimpan'}
+              {toast.type === "error" ? "Error" : toast.type === "info" ? "Informasi" : "Data Disimpan"}
             </h4>
-            <p className="text-xs text-slate-300 mt-0.5">
-              {toast.message}
-            </p>
+            <p className="text-xs text-slate-300 mt-0.5">{toast.message}</p>
           </div>
           <button
             onClick={() => setToast({ show: false, message: "", type: "success" })}
@@ -242,7 +241,6 @@ export default function BarangKeluar() {
         </div>
       )}
 
-      {/* Header section with back navigation and input trigger button */}
       <div className="flex items-center justify-between">
         <button
           onClick={() => window.history.back()}
@@ -255,16 +253,15 @@ export default function BarangKeluar() {
         <Button
           onClick={handleConfirm}
           className="bg-emerald-700 hover:bg-emerald-800 text-white font-medium shadow-sm rounded-lg flex items-center gap-1.5 h-9 px-4 cursor-pointer"
+          disabled={loading}
         >
           <Plus className="h-4 w-4" />
-          <span>Input Barang Keluar</span>
+          <span>{loading ? "Memuat..." : "Input Barang Keluar"}</span>
         </Button>
       </div>
 
-      {/* Form Fields Card */}
       <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Date Picker */}
           <div className="space-y-1.5">
             <Label className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Tanggal</Label>
             <div className="relative">
@@ -278,7 +275,6 @@ export default function BarangKeluar() {
             </div>
           </div>
 
-          {/* Destination / Recipient */}
           <div className="space-y-1.5">
             <Label className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Tujuan / Penerima</Label>
             <div className="relative">
@@ -293,7 +289,6 @@ export default function BarangKeluar() {
             </div>
           </div>
 
-          {/* Officer dropdown */}
           <div className="space-y-1.5">
             <Label className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Petugas</Label>
             <Select value={petugas} onValueChange={setPetugas}>
@@ -310,14 +305,11 @@ export default function BarangKeluar() {
         </div>
       </div>
 
-      {/* Detail Barang Card */}
       <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden">
-        {/* Card Header Bar */}
         <div className="bg-[#f0f4f8]/50 p-4 border-b border-slate-200/80">
           <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Detail Barang</h3>
         </div>
 
-        {/* Table View */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
@@ -348,7 +340,6 @@ export default function BarangKeluar() {
                         <input
                           type="number"
                           min="1"
-                          max={item.stock}
                           value={item.qty}
                           onChange={(e) => handleQtyChange(item.id, e.target.value)}
                           className="w-16 h-8 text-center border border-slate-200 rounded-lg text-slate-700 font-medium focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
@@ -357,7 +348,7 @@ export default function BarangKeluar() {
                     </td>
                     <td className="py-3.5 px-4 text-center">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
-                        {item.stock} Unit
+                        {item.stock ?? "—"} Unit
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-center">
@@ -375,7 +366,6 @@ export default function BarangKeluar() {
           </table>
         </div>
 
-        {/* Add Goods Link triggers Radix UI Dialog */}
         <div className="p-4 border-t border-slate-100 bg-slate-50/20">
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
@@ -400,51 +390,14 @@ export default function BarangKeluar() {
                       <SelectValue placeholder="Pilih barang" />
                     </SelectTrigger>
                     <SelectContent>
-                      {AVAILABLE_STOCK.map(item => (
-                        <SelectItem key={item.kode} value={item.kode}>
-                          {item.kode} - {item.nama} (Stok: {item.stock})
+                      {products.map((item) => (
+                        <SelectItem key={item.id} value={String(item.id)}>
+                          {item.name}
                         </SelectItem>
                       ))}
-                      <SelectItem value="custom">+ Item Kustom</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
-                {selectedItemOption === "custom" && (
-                  <div className="space-y-3.5 border-l-2 border-emerald-500 pl-3.5 py-1">
-                    <div className="space-y-1">
-                      <Label className="text-xs text-slate-500 font-medium">Kode Barang Custom</Label>
-                      <Input
-                        value={customKode}
-                        onChange={(e) => setCustomKode(e.target.value)}
-                        placeholder="Contoh: BR0099"
-                        className="h-9 border-slate-200 text-slate-700"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-slate-500 font-medium">Nama Barang</Label>
-                      <Input
-                        value={customNama}
-                        onChange={(e) => setCustomNama(e.target.value)}
-                        placeholder="Nama barang..."
-                        className="h-9 border-slate-200 text-slate-700"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-slate-500 font-medium">Stok Tersedia</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={customStock}
-                        onChange={(e) => setCustomStock(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="h-9 border-slate-200 text-slate-700"
-                        required
-                      />
-                    </div>
-                  </div>
-                )}
 
                 <div className="space-y-1.5">
                   <Label className="text-xs text-slate-500 font-semibold uppercase">Jumlah Keluar</Label>
@@ -452,7 +405,7 @@ export default function BarangKeluar() {
                     type="number"
                     min="1"
                     value={addQty}
-                    onChange={(e) => setAddQty(Math.max(1, parseInt(e.target.value) || 1))}
+                    onChange={(e) => setAddQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
                     className="h-10 text-slate-700 border-slate-200"
                     required
                   />
@@ -477,7 +430,6 @@ export default function BarangKeluar() {
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div className="flex items-center justify-end gap-3.5">
         <Button
           variant="outline"
@@ -489,12 +441,12 @@ export default function BarangKeluar() {
         <Button
           onClick={handleConfirm}
           className="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs h-9 px-6 rounded-lg cursor-pointer shadow-sm"
+          disabled={loading}
         >
           Konfirmasi
         </Button>
       </div>
 
-      {/* Center history link */}
       <div className="flex justify-center pt-2">
         <button
           onClick={() => setIsHistoryOpen(true)}
@@ -505,7 +457,6 @@ export default function BarangKeluar() {
         </button>
       </div>
 
-      {/* History Dialog Modal */}
       <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
         <DialogContent className="sm:max-w-2xl bg-white p-5 border border-slate-200 rounded-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>

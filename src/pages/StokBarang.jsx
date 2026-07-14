@@ -17,57 +17,15 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import api from "@/api/api";
+import ENDPOINTS from "@/api/endpoints";
 
-const SAMPLE_ROWS = [
-  {
-    kode: "BRG-001",
-    nama: "Kopi Bubuk",
-    kategori: "Minuman",
-    satuan: "Bungkus",
-    harga: "Rp 12.000,00",
-    stok: 12,
-    status: "Normal",
-  },
-  {
-    kode: "BRG-002",
-    nama: "Teh Celup",
-    kategori: "Minuman",
-    satuan: "Kotak",
-    harga: "Rp 9.000,00",
-    stok: 5,
-    status: "Menipis",
-  },
-  {
-    kode: "BRG-003",
-    nama: "Susu Kental Manis",
-    kategori: "Minuman",
-    satuan: "Kaleng",
-    harga: "Rp 14.000,00",
-    stok: 2,
-    status: "Kritis",
-  },
-  {
-    kode: "BRG-004",
-    nama: "Kecap Manis",
-    kategori: "Bumbu Dapur",
-    satuan: "Botol",
-    harga: "Rp 18.000,00",
-    stok: 45,
-    status: "Normal",
-  },
-  {
-    kode: "BRG-005",
-    nama: "Garam Dapur",
-    kategori: "Bumbu Dapur",
-    satuan: "Bungkus",
-    harga: "Rp 4.000,00",
-    stok: 24,
-    status: "Normal",
-  },
-];
-
-const CATEGORY_OPTIONS = ["Semua Kategori", "Minuman", "Bumbu Dapur"];
-const STATUS_OPTIONS = ["Semua Status", "Normal", "Menipis", "Kritis"];
+const normalizeListData = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.results)) return payload.results;
+  if (payload && Array.isArray(payload.data)) return payload.data;
+  return [];
+};
 
 function statusClasses(status) {
   switch (status) {
@@ -76,20 +34,31 @@ function statusClasses(status) {
     case "Menipis":
       return "bg-amber-50 text-amber-700 font-semibold";
     case "Kritis":
+    case "Habis":
       return "bg-rose-50 text-rose-700 font-semibold";
     default:
       return "bg-slate-50 text-slate-700";
   }
 }
 
+function getStatus(remainingQuantity) {
+  const quantity = Number(remainingQuantity ?? 0);
+
+  if (quantity === 0) return "Habis";
+  if (quantity <= 10) return "Kritis";
+  if (quantity <= 20) return "Menipis";
+  return "Normal";
+}
+
 export default function StokBarang() {
   const location = useLocation();
 
+  const [items, setItems] = useState([]);
   const [query, setQuery] = useState("");
   const [kategori, setKategori] = useState("");
   const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // Set default status filter depending on route pathname
   useEffect(() => {
     if (location.pathname === "/stok-kritis") {
       setStatus("Kritis");
@@ -100,6 +69,37 @@ export default function StokBarang() {
       setKategori("");
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    const loadStockBatches = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(ENDPOINTS.STOCK_BATCH);
+        const data = normalizeListData(response.data);
+
+        const normalizedItems = data.map((item) => ({
+          batchNumber: item.batch_number || item.batchNumber || "-",
+          productName: item.product_name || item.productName || "-",
+          categoryName: item.category_name || item.categoryName || "-",
+          supplierName: item.supplier_name || item.supplierName || "-",
+          binName: item.bin_name || item.binName || "-",
+          remainingQuantity: Number(item.remaining_quantity ?? item.remainingQuantity ?? 0),
+          receivedDate: item.received_date || item.receivedDate || "-",
+          expiredDate: item.expired_date || item.expiredDate || "-",
+          status: getStatus(item.remaining_quantity ?? item.remainingQuantity ?? 0),
+        }));
+
+        setItems(normalizedItems);
+      } catch (error) {
+        console.error("Gagal mengambil data stock batches", error);
+        setItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStockBatches();
+  }, []);
 
   const pageTitle = useMemo(() => {
     if (location.pathname === "/stok-kritis") {
@@ -115,22 +115,42 @@ export default function StokBarang() {
     return "Dashboard > Manajemen Barang";
   }, [location.pathname]);
 
-  const rows = useMemo(() => {
-    return SAMPLE_ROWS.filter((item) => {
-      const matchesQuery =
-        !query ||
-        item.kode.toLowerCase().includes(query.toLowerCase()) ||
-        item.nama.toLowerCase().includes(query.toLowerCase()) ||
-        item.kategori.toLowerCase().includes(query.toLowerCase());
+  const categoryOptions = useMemo(() => {
+    const categories = Array.from(new Set(items.map((item) => item.categoryName).filter(Boolean)));
+    return ["Semua Kategori", ...categories];
+  }, [items]);
 
-      const matchesKategori = !kategori || kategori === "Semua Kategori" || item.kategori === kategori;
+  const statusOptions = useMemo(() => {
+    const statuses = Array.from(new Set(items.map((item) => item.status).filter(Boolean)));
+    return ["Semua Status", ...statuses];
+  }, [items]);
+
+  const rows = useMemo(() => {
+    return items.filter((item) => {
+      const searchableText = [item.batchNumber, item.productName, item.categoryName, item.supplierName]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      const matchesQuery = !query || searchableText.includes(query.toLowerCase());
+      const matchesKategori = !kategori || kategori === "Semua Kategori" || item.categoryName === kategori;
       const matchesStatus = !status || status === "Semua Status" || item.status === status;
 
       return matchesQuery && matchesKategori && matchesStatus;
     });
-  }, [query, kategori, status]);
+  }, [items, query, kategori, status]);
 
-  const totalUnits = SAMPLE_ROWS.reduce((sum, item) => sum + item.stok, 0);
+  const totalUnits = useMemo(() => {
+    return items.reduce((sum, item) => sum + item.remainingQuantity, 0);
+  }, [items]);
+
+  const summaryStats = useMemo(() => {
+    const normalCount = items.filter((item) => item.status === "Normal").length;
+    const menipisCount = items.filter((item) => item.status === "Menipis").length;
+    const kritisCount = items.filter((item) => item.status === "Kritis" || item.status === "Habis").length;
+
+    return { normalCount, menipisCount, kritisCount };
+  }, [items]);
 
   return (
     <div className="space-y-6">
@@ -157,7 +177,7 @@ export default function StokBarang() {
                   <SelectValue placeholder="Semua Kategori" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORY_OPTIONS.map((item) => (
+                  {categoryOptions.map((item) => (
                     <SelectItem key={item} value={item}>
                       {item}
                     </SelectItem>
@@ -169,7 +189,7 @@ export default function StokBarang() {
                   <SelectValue placeholder="Semua Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {STATUS_OPTIONS.map((item) => (
+                  {statusOptions.map((item) => (
                     <SelectItem key={item} value={item}>
                       {item}
                     </SelectItem>
@@ -187,27 +207,41 @@ export default function StokBarang() {
                   <TableHead>Kode Barang</TableHead>
                   <TableHead>Nama Barang</TableHead>
                   <TableHead>Kategori</TableHead>
-                  <TableHead>Harga</TableHead>
+                  <TableHead>Supplier</TableHead>
                   <TableHead className="text-right">Stok</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((item, index) => (
-                  <TableRow key={item.kode}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell className="font-semibold text-slate-700">{item.kode}</TableCell>
-                    <TableCell className="max-w-xs truncate">{item.nama}</TableCell>
-                    <TableCell>{item.kategori}</TableCell>
-                    <TableCell>{item.harga}</TableCell>
-                    <TableCell className="text-right font-medium">{item.stok}</TableCell>
-                    <TableCell className="text-center">
-                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusClasses(item.status)}`}>
-                        {item.status}
-                      </span>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-slate-400">
+                      Memuat data...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : rows.length > 0 ? (
+                  rows.map((item, index) => (
+                    <TableRow key={`${item.batchNumber}-${index}`}>
+                      <TableCell>{index + 1}</TableCell>
+                      <TableCell className="font-semibold text-slate-700">{item.batchNumber}</TableCell>
+                      <TableCell className="max-w-xs truncate">{item.productName}</TableCell>
+                      <TableCell>{item.categoryName}</TableCell>
+                      <TableCell>{item.supplierName}</TableCell>
+                      <TableCell className="text-right font-medium">{item.remainingQuantity}</TableCell>
+                      <TableCell className="text-center">
+                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusClasses(item.status)}`}>
+                          {item.status}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-slate-400">
+                      Tidak ada data stok yang ditemukan.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -227,15 +261,15 @@ export default function StokBarang() {
             <div className="mt-4 grid gap-3">
               <div className="rounded-lg bg-slate-50 border border-slate-200/60 p-4">
                 <p className="text-xs text-slate-500 font-medium">Barang Normal</p>
-                <p className="mt-2 text-xl font-bold text-slate-800">3</p>
+                <p className="mt-2 text-xl font-bold text-slate-800">{summaryStats.normalCount}</p>
               </div>
               <div className="rounded-lg bg-amber-50/50 border border-amber-100 p-4">
                 <p className="text-xs text-amber-700 font-medium">Barang Menipis</p>
-                <p className="mt-2 text-xl font-bold text-amber-800">1</p>
+                <p className="mt-2 text-xl font-bold text-amber-800">{summaryStats.menipisCount}</p>
               </div>
               <div className="rounded-lg bg-rose-50/50 border border-rose-100 p-4">
                 <p className="text-xs text-rose-700 font-medium">Barang Kritis</p>
-                <p className="mt-2 text-xl font-bold text-rose-800">1</p>
+                <p className="mt-2 text-xl font-bold text-rose-800">{summaryStats.kritisCount}</p>
               </div>
             </div>
           </div>
@@ -254,7 +288,7 @@ export default function StokBarang() {
         </div>
         <div className="rounded-xl border border-emerald-100 bg-emerald-50/30 p-6 shadow-sm">
           <p className="text-xs uppercase tracking-wider text-emerald-800 font-semibold">Total Unit Tersedia</p>
-          <p className="mt-4 text-4xl font-bold text-emerald-800">2.450</p>
+          <p className="mt-4 text-4xl font-bold text-emerald-800">{totalUnits.toLocaleString()}</p>
           <p className="mt-4 text-sm text-emerald-700">
             Performa persediaan terjaga, dan musim ini kebutuhan stok diprediksi tetap stabil.
           </p>

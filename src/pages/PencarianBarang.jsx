@@ -10,21 +10,30 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import api from "@/api/api";
+import ENDPOINTS from "@/api/endpoints";
 
-const SAMPLE_ITEMS = [
-  { kode: "BRG-001", nama: "Kopi Bubuk", kategori: "Minuman", satuan: "Bungkus", harga: "Rp 12.000,00", stok: 12, status: "Normal", lokasi: "Rak A-01" },
-  { kode: "BRG-002", nama: "Teh Celup", kategori: "Minuman", satuan: "Kotak", harga: "Rp 9.000,00", stok: 5, status: "Menipis", lokasi: "Rak A-02" },
-  { kode: "BRG-003", nama: "Susu Kental Manis", kategori: "Minuman", satuan: "Kaleng", harga: "Rp 14.000,00", stok: 2, status: "Kritis", lokasi: "Rak B-01" },
-  { kode: "BRG-004", nama: "Kecap Manis", kategori: "Bumbu Dapur", satuan: "Botol", harga: "Rp 18.000,00", stok: 45, status: "Normal", lokasi: "Rak C-03" },
-  { kode: "BRG-005", nama: "Garam Dapur", kategori: "Bumbu Dapur", satuan: "Bungkus", harga: "Rp 4.000,00", stok: 24, status: "Normal", lokasi: "Rak C-04" },
-  { kode: "BRG-006", nama: "Mouse Logitech", kategori: "Elektronik", satuan: "Unit", harga: "Rp 150.000,00", stok: 120, status: "Normal", lokasi: "Rak D-02" },
-  { kode: "BRG-007", nama: "Keyboard Mechanical", kategori: "Elektronik", satuan: "Unit", harga: "Rp 450.000,00", stok: 15, status: "Normal", lokasi: "Rak D-03" },
-  { kode: "BRG-008", nama: "Monitor LCD 24 Inch", kategori: "Elektronik", satuan: "Unit", harga: "Rp 1.800.000,00", stok: 3, status: "Kritis", lokasi: "Rak D-05" }
-];
+const normalizeListData = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.results)) return payload.results;
+  if (payload && Array.isArray(payload.data)) return payload.data;
+  return [];
+};
+
+function getStatus(remainingQuantity) {
+  const quantity = Number(remainingQuantity ?? 0);
+
+  if (quantity === 0) return "Habis";
+  if (quantity <= 10) return "Kritis";
+  if (quantity <= 20) return "Menipis";
+  return "Normal";
+}
 
 export default function PencarianBarang() {
   const [query, setQuery] = useState("");
   const [history, setHistory] = useState(["Kopi", "Elektronik", "Rak A"]);
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const searchInputRef = useRef(null);
 
   useEffect(() => {
@@ -33,17 +42,56 @@ export default function PencarianBarang() {
     }
   }, []);
 
+  useEffect(() => {
+    const loadStockBatches = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get(ENDPOINTS.STOCK_BATCH);
+        const data = normalizeListData(response.data);
+
+        const normalizedItems = data.map((item) => ({
+          batchNumber: item.batch_number || item.batchNumber || "-",
+          productName: item.product_name || item.productName || "-",
+          categoryName: item.category_name || item.categoryName || "-",
+          supplierName: item.supplier_name || item.supplierName || "-",
+          binName: item.bin_name || item.binName || "-",
+          remainingQuantity: Number(item.remaining_quantity ?? item.remainingQuantity ?? 0),
+          receivedDate: item.received_date || item.receivedDate || "-",
+          expiredDate: item.expired_date || item.expiredDate || "-",
+          status: getStatus(item.remaining_quantity ?? item.remainingQuantity ?? 0),
+        }));
+
+        setItems(normalizedItems);
+      } catch (error) {
+        console.error("Failed to load stock batches", error);
+        setItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStockBatches();
+  }, []);
+
   const filteredItems = useMemo(() => {
-    if (!query) return SAMPLE_ITEMS;
+    if (!query) return items;
+
     const q = query.toLowerCase();
-    return SAMPLE_ITEMS.filter(
-      (item) =>
-        item.kode.toLowerCase().includes(q) ||
-        item.nama.toLowerCase().includes(q) ||
-        item.kategori.toLowerCase().includes(q) ||
-        item.lokasi.toLowerCase().includes(q)
-    );
-  }, [query]);
+    return items.filter((item) => {
+      const searchableText = [
+        item.batchNumber,
+        item.productName,
+        item.categoryName,
+        item.supplierName,
+        item.binName,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(q);
+    });
+  }, [items, query]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -63,6 +111,7 @@ export default function PencarianBarang() {
       case "Menipis":
         return "bg-amber-50 text-amber-700 font-semibold";
       case "Kritis":
+      case "Habis":
         return "bg-rose-50 text-rose-700 font-semibold";
       default:
         return "bg-slate-50 text-slate-700";
@@ -133,36 +182,41 @@ export default function PencarianBarang() {
           </h2>
         </div>
 
-        {filteredItems.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-12 border border-dashed border-slate-200 rounded-xl">
+            <Search className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-700 font-semibold text-lg">Memuat data...</p>
+          </div>
+        ) : filteredItems.length > 0 ? (
           <div className="rounded-xl border border-slate-200/80 bg-white overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/50">
                   <TableHead className="w-12">No</TableHead>
-                  <TableHead>Kode Barang</TableHead>
-                  <TableHead>Nama Barang</TableHead>
+                  <TableHead>Batch Number</TableHead>
+                  <TableHead>Product</TableHead>
                   <TableHead>Kategori</TableHead>
                   <TableHead>Lokasi Gudang</TableHead>
-                  <TableHead className="text-right">Harga</TableHead>
+                  <TableHead>Supplier</TableHead>
                   <TableHead className="text-right">Stok</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredItems.map((item, index) => (
-                  <TableRow key={item.kode} className="hover:bg-slate-50/50 transition-colors">
+                  <TableRow key={`${item.batchNumber}-${index}`} className="hover:bg-slate-50/50 transition-colors">
                     <TableCell className="text-slate-400 font-medium">{index + 1}</TableCell>
-                    <TableCell className="font-semibold text-slate-700">{item.kode}</TableCell>
-                    <TableCell className="font-medium text-slate-800">{item.nama}</TableCell>
-                    <TableCell className="text-slate-600">{item.kategori}</TableCell>
+                    <TableCell className="font-semibold text-slate-700">{item.batchNumber}</TableCell>
+                    <TableCell className="font-medium text-slate-800">{item.productName}</TableCell>
+                    <TableCell className="text-slate-600">{item.categoryName}</TableCell>
                     <TableCell className="text-slate-700">
                       <span className="inline-flex items-center gap-1 bg-slate-100/80 text-slate-700 text-xs px-2 py-0.5 rounded font-medium">
                         <MapPin className="h-3 w-3 text-slate-400" />
-                        {item.lokasi}
+                        {item.binName}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right text-slate-600">{item.harga}</TableCell>
-                    <TableCell className="text-right font-semibold text-slate-800">{item.stok}</TableCell>
+                    <TableCell className="text-slate-600">{item.supplierName}</TableCell>
+                    <TableCell className="text-right font-semibold text-slate-800">{item.remainingQuantity}</TableCell>
                     <TableCell className="text-center">
                       <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusClasses(item.status)}`}>
                         {item.status}

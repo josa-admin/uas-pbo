@@ -1,33 +1,43 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertOctagon, Calendar, MapPin, RotateCcw, Search, Trash2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Table,
-  TableHeader,
   TableBody,
-  TableRow,
-  TableHead,
   TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { AlertOctagon, Calendar, Trash2, RotateCcw, MapPin, Search } from "lucide-react";
-import { getExpiredAlert } from "../api/expiredApi";
+import api from "@/api/api";
+import ENDPOINTS from "@/api/endpoints";
 
-
-const CURRENT_DATE = new Date("2026-07-13"); // Anchor date based on system local time
+const normalizeListData = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.results)) return payload.results;
+  if (payload && Array.isArray(payload.data)) return payload.data;
+  return [];
+};
 
 export default function BarangExpired() {
   const [items, setItems] = useState([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+
+  const showToastMsg = (message, type = "success") => {
+    setToast({ show: true, message, type });
+  };
 
   const loadExpiredItems = async () => {
     try {
       setLoading(true);
-      const response = await getExpiredAlert();
-      setItems(response.data);
+      const response = await api.get(ENDPOINTS.EXPIRED_ALERT);
+      setItems(normalizeListData(response.data));
     } catch (error) {
       console.error(error);
-      alert("Gagal mengambil data barang expired");
+      showToastMsg("Gagal mengambil data barang expired", "error");
     } finally {
       setLoading(false);
     }
@@ -37,15 +47,26 @@ export default function BarangExpired() {
     loadExpiredItems();
   }, []);
 
+  useEffect(() => {
+    if (!toast.show) return undefined;
+
+    const timer = window.setTimeout(() => {
+      setToast({ show: false, message: "", type: "success" });
+    }, 4000);
+
+    return () => window.clearTimeout(timer);
+  }, [toast.show]);
+
   const processedItems = useMemo(() => {
-    return items.map(item => {
-      const expDate = new Date(item.expiredDate);
-      const diffTime = expDate.getTime() - CURRENT_DATE.getTime();
+    return items.map((item) => {
+      const expDate = new Date(item.expired_date || item.expiredDate || "");
+      const today = new Date();
+      const diffTime = expDate.getTime() - today.getTime();
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
+
       let status = "aman";
       let statusText = "";
-      
+
       if (diffDays < 0) {
         status = "expired";
         statusText = `Expired (${Math.abs(diffDays)} hari lalu)`;
@@ -57,12 +78,20 @@ export default function BarangExpired() {
         statusText = `${diffDays} hari lagi`;
       }
 
+      const remainingQuantity = Number(item.remaining_quantity ?? item.stok ?? 0);
+
       return {
         ...item,
+        id: item.id || item.stock_id || item.batch_number,
+        kode: item.batch_number || item.kode || "-",
+        nama: item.product_name || item.nama || "-",
+        kategori: item.category_name || item.kategori || "-",
+        lokasi: item.bin_name || item.lokasi || "-",
+        expiredDate: item.expired_date || item.expiredDate || "",
+        stok: remainingQuantity,
         diffDays,
         status,
         statusText,
-        nilai: item.stok * item.harga
       };
     });
   }, [items]);
@@ -70,54 +99,89 @@ export default function BarangExpired() {
   const filteredItems = useMemo(() => {
     if (!query) return processedItems;
     const q = query.toLowerCase();
-    return processedItems.filter(item => 
-      item.nama.toLowerCase().includes(q) ||
-      item.kode.toLowerCase().includes(q) ||
-      item.kategori.toLowerCase().includes(q) ||
-      item.lokasi.toLowerCase().includes(q)
-    );
+    return processedItems.filter((item) => {
+      const searchable = [
+        item.product_name,
+        item.category_name,
+        item.supplier_name,
+        item.bin_name,
+        item.batch_number,
+        item.nama,
+        item.kategori,
+        item.lokasi,
+        item.kode,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchable.includes(q);
+    });
   }, [processedItems, query]);
 
-  // Statistics
   const stats = useMemo(() => {
     let expiredCount = 0;
     let hampirCount = 0;
-    let totalLoss = 0;
+    let expiredQuantityTotal = 0;
 
-    processedItems.forEach(item => {
+    processedItems.forEach((item) => {
       if (item.status === "expired") {
         expiredCount += 1;
-        totalLoss += item.nilai;
+        expiredQuantityTotal += Number(item.stok || 0);
       } else if (item.status === "hampir") {
         hampirCount += 1;
       }
     });
 
-    return { expiredCount, hampirCount, totalLoss };
+    return { expiredCount, hampirCount, expiredQuantityTotal };
   }, [processedItems]);
 
-  const handleDelete = (kode) => {
-    if (confirm("Apakah Anda yakin ingin membuang/menghapus barang ini dari gudang?")) {
-      setItems(prev => prev.filter(item => item.kode !== kode));
+  const handleDelete = async (id) => {
+    if (!id) {
+      showToastMsg("ID stok tidak tersedia", "error");
+      return;
+    }
+
+    try {
+      await api.delete(ENDPOINTS.STOCK_DETAIL(id));
+      showToastMsg("Barang berhasil dibuang", "success");
+      await loadExpiredItems();
+    } catch (error) {
+      console.error(error);
+      showToastMsg("Gagal membuang barang", "error");
     }
   };
 
   const handleRetur = (kode) => {
-    alert(`Barang dengan kode ${kode} ditandai untuk dikembalikan (retur) ke supplier.`);
+    showToastMsg(`TODO: integrasi retur untuk ${kode}`, "info");
   };
 
-  const disposeAllExpired = () => {
-    if (confirm("Apakah Anda yakin ingin membuang semua barang yang sudah kedaluwarsa?")) {
-      setItems(prev => prev.filter(item => {
-        const expDate = new Date(item.expiredDate);
-        return expDate.getTime() >= CURRENT_DATE.getTime();
-      }));
-    }
+  const disposeAllExpired = async () => {
+    showToastMsg("TODO: integrasi pembuangan batch expired", "info");
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {toast.show && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3.5 bg-[#1e293b] text-white px-5 py-4 rounded-xl shadow-xl border border-slate-700 animate-slide-in">
+          <div className={`p-1.5 rounded-full ${toast.type === "error" ? "bg-red-500/20 text-red-400" : toast.type === "info" ? "bg-blue-500/20 text-blue-400" : "bg-emerald-500/20 text-emerald-400"}`}>
+            {toast.type === "error" ? <X className="h-5 w-5" /> : <Check className="h-5 w-5" />}
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-white">
+              {toast.type === "error" ? "Error" : toast.type === "info" ? "Informasi" : "Data Disimpan"}
+            </h4>
+            <p className="text-xs text-slate-300 mt-0.5">{toast.message}</p>
+          </div>
+          <button
+            onClick={() => setToast({ show: false, message: "", type: "success" })}
+            className="text-slate-400 hover:text-slate-200 ml-4 focus:outline-none"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
         <div>
           <div className="text-sm text-slate-500 font-medium">Dashboard &gt; Barang Expired</div>
@@ -130,7 +194,6 @@ export default function BarangExpired() {
         )}
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <div className="rounded-xl border border-rose-100 bg-rose-50/20 p-5 shadow-sm flex items-center justify-between">
           <div>
@@ -141,7 +204,7 @@ export default function BarangExpired() {
             <AlertOctagon className="h-6 w-6" />
           </div>
         </div>
-        
+
         <div className="rounded-xl border border-amber-100 bg-amber-50/20 p-5 shadow-sm flex items-center justify-between">
           <div>
             <div className="text-sm font-medium text-amber-800">Hampir Kedaluwarsa (&le; 30 Hari)</div>
@@ -154,18 +217,17 @@ export default function BarangExpired() {
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-slate-500">Estimasi Kerugian Gudang</div>
+            <div className="text-sm font-medium text-slate-500">Jumlah Barang Expired</div>
             <div className="text-2xl font-bold text-slate-800 mt-1">
-              Rp {stats.totalLoss.toLocaleString("id-ID")}
+              {stats.expiredQuantityTotal} Unit
             </div>
           </div>
           <div className="bg-slate-50 border border-slate-200 text-slate-500 p-3 rounded-xl">
-            <span className="text-lg font-bold">Rp</span>
+            <span className="text-lg font-bold">U</span>
           </div>
         </div>
       </div>
 
-      {/* Table Area */}
       <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h2 className="text-lg font-bold text-slate-800">Daftar Pengawasan Kedaluwarsa</h2>
@@ -198,9 +260,15 @@ export default function BarangExpired() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredItems.length > 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center py-10 text-slate-400">
+                    Memuat data...
+                  </TableCell>
+                </TableRow>
+              ) : filteredItems.length > 0 ? (
                 filteredItems.map((item, index) => (
-                  <TableRow key={item.kode} className="hover:bg-slate-50/30 transition-colors">
+                  <TableRow key={item.id || item.kode} className="hover:bg-slate-50/30 transition-colors">
                     <TableCell className="text-slate-400">{index + 1}</TableCell>
                     <TableCell className="font-semibold text-slate-700">{item.kode}</TableCell>
                     <TableCell className="font-medium text-slate-800">{item.nama}</TableCell>
@@ -223,22 +291,22 @@ export default function BarangExpired() {
                     </TableCell>
                     <TableCell className="text-right font-semibold">{item.stok}</TableCell>
                     <TableCell className="text-right text-slate-600 text-sm">
-                      Rp {item.nilai.toLocaleString("id-ID")}
+                      -
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-1.5">
-                        <Button 
-                          onClick={() => handleRetur(item.kode)} 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          onClick={() => handleRetur(item.kode)}
+                          variant="outline"
+                          size="sm"
                           className="h-8 border-slate-200 text-slate-600 text-xs px-2.5 font-medium gap-1"
                         >
                           <RotateCcw className="h-3 w-3" /> Retur
                         </Button>
-                        <Button 
-                          onClick={() => handleDelete(item.kode)} 
-                          variant="destructive" 
-                          size="sm" 
+                        <Button
+                          onClick={() => handleDelete(item.id)}
+                          variant="destructive"
+                          size="sm"
                           className="h-8 bg-rose-50 hover:bg-rose-100 border-none text-rose-600 shadow-none text-xs px-2.5 font-medium gap-1"
                         >
                           <Trash2 className="h-3 w-3" /> Buang

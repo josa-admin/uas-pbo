@@ -13,13 +13,18 @@ import {
 export default function Sidebar() {
   const menuItems = [
     { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+    { name: "Product", path: "/master-product", icon: Package },
+    { name: "Category", path: "/master-category", icon: Package },
+    { name: "Suplier", path: "/master-supplier", icon: Package },
+    { name: "Bins", path: "/master-bin", icon: Package },
     { name: "Manajemen Barang", path: "/stok-barang", icon: Package },
-    { name: "Barang Masuk", path: "/barang-masuk", icon: LogIn },
-    { name: "Barang Keluar", path: "/barang-keluar", icon: LogOut },
+    { name: "inbound", path: "/barang-masuk", icon: LogIn },
+    { name: "outbound", path: "/barang-keluar", icon: LogOut },
     { name: "Laporan", path: "/laporan", icon: BarChart3 },
     { name: "Pencarian Barang", path: "/pencarian-barang", icon: Search },
     { name: "Stok Kritis", path: "/stok-kritis", icon: AlertTriangle },
     { name: "Barang Expired", path: "/barang-expired", icon: Calendar },
+    
   ];
 
   return (
